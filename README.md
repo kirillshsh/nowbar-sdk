@@ -3,6 +3,10 @@
 > Android library module for Samsung Now Bar and Android 16 Live Updates.
 
 <p align="center">
+  <img src="./assets/readme/nowbar-sdk-banner.jpg" alt="NowBar SDK banner preview" width="100%" />
+</p>
+
+<p align="center">
   <a href="#english">🇬🇧 English</a>
   ·
   <a href="#russian">🇷🇺 Русский</a>
