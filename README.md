@@ -1,9 +1,15 @@
 # NowBar SDK
 
-> Android library module for Samsung Now Bar and Android 16 Live Updates.
-
 <p align="center">
   <img src="./assets/readme/nowbar-sdk-banner.jpg" alt="NowBar SDK banner preview" width="100%" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/API-26%2B-brightgreen?logo=android" alt="API 26+" />
+  <img src="https://img.shields.io/badge/compileSdk-36-blue?logo=android" alt="compileSdk 36" />
+  <img src="https://img.shields.io/badge/Kotlin-1.9+-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin" />
+  <img src="https://img.shields.io/github/license/kirillshsh/nowbar-sdk?color=orange" alt="License" />
+  <img src="https://img.shields.io/github/v/tag/kirillshsh/nowbar-sdk?label=version&color=blue" alt="Version" />
 </p>
 
 <p align="center">
@@ -33,15 +39,39 @@
 | Integration style | Copy the [`nowbar/`](./nowbar) module into your project |
 | Entry points | Direct manager API, session API, foreground service helper |
 
-### Repository Layout
+### Architecture
 
-- [`nowbar/`](./nowbar) - Android library module
-- [`examples/`](./examples) - ready-to-copy usage examples
-- [`examples/TimerSessionExample.kt`](./examples/TimerSessionExample.kt) - session API example
-- [`examples/TimerNowBarService.kt`](./examples/TimerNowBarService.kt) - foreground service example
-- [`examples/WorkoutNowBarService.kt`](./examples/WorkoutNowBarService.kt) - workout example
-- [`examples/NavigationNowBarService.kt`](./examples/NavigationNowBarService.kt) - navigation example
-- [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) - manifest snippet
+```mermaid
+graph TD
+    A[Your App] --> B[NowBarManager]
+    A --> C[NowBarSession]
+    A --> D[NowBarForegroundService]
+    B --> E[NowBarNotificationBuilder]
+    C --> E
+    D --> E
+    E --> F{FeatureDetector}
+    F -->|Samsung| G[OngoingExtrasBuilder]
+    F -->|Android 16+| H[LiveUpdateBuilder]
+    F -->|Other| I[StandardNotificationAdapter]
+    G --> J[Now Bar Surface]
+    H --> K[Live Update Surface]
+    I --> L[Ongoing Notification]
+
+    style J fill:#a855f7,color:#fff
+    style K fill:#3b82f6,color:#fff
+    style L fill:#6b7280,color:#fff
+```
+
+### Card Types
+
+| Card | Use Case | Samsung extras | Live Updates |
+| --- | --- | :---: | :---: |
+| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Countdown / stopwatch | ✅ | ✅ |
+| [`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt) | Fitness tracking | ✅ | ✅ |
+| [`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt) | Music / podcast playback | ✅ | ✅ |
+| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Incoming / active calls | ✅ | ✅ |
+| [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Turn-by-turn navigation | ✅ | ✅ |
+| [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Any custom scenario | ✅ | ✅ |
 
 ### Core API
 
@@ -53,20 +83,11 @@
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Helper base class for long-running foreground-service flows |
 | [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Base model for card content |
 
-### Card Models
-
-[`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt),
-[`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt),
-[`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt),
-[`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt),
-[`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt),
-[`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt)
-
 ### Platform Support
 
 | Platform | Behavior |
 | --- | --- |
-| Samsung devices with Now Bar support | Native Samsung ongoing-activity extras path |
+| Samsung devices with Now Bar | Native Samsung ongoing-activity extras path |
 | Android 16+ | Native Live Updates / promoted ongoing notification path |
 | Unsupported devices | Plain ongoing notification for `AUTO` / `STANDARD_NOTIFICATION`, no SDK-managed posting for `NONE` |
 
@@ -95,7 +116,10 @@ dependencies {
 }
 ```
 
-4. Merge the required manifest entries from [`nowbar/src/main/AndroidManifest.xml`](./nowbar/src/main/AndroidManifest.xml) or [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml):
+<details>
+<summary><b>4. Manifest setup</b></summary>
+
+Merge the required entries from [`nowbar/src/main/AndroidManifest.xml`](./nowbar/src/main/AndroidManifest.xml) or [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml):
 
 ```xml
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -110,9 +134,12 @@ dependencies {
 </application>
 ```
 
-5. Request `POST_NOTIFICATIONS` at runtime on Android 13+.
+> [!NOTE]
+> `FOREGROUND_SERVICE_*` permissions depend on your service type. For example, the timer service uses `specialUse`, while the workout example uses `health|location`, so [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) also includes `FOREGROUND_SERVICE_HEALTH`, `FOREGROUND_SERVICE_LOCATION`, and `android:foregroundServiceType="health|location"` for that service.
 
-`FOREGROUND_SERVICE_*` permissions depend on your service type. For example, the timer service uses `specialUse`, while the workout example uses `health|location`, so [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) also includes `FOREGROUND_SERVICE_HEALTH`, `FOREGROUND_SERVICE_LOCATION`, and `android:foregroundServiceType="health|location"` for that service.
+</details>
+
+5. Request `POST_NOTIFICATIONS` at runtime on Android 13+.
 
 ### Quick Start
 
@@ -137,34 +164,95 @@ session.start(
     )
 )
 
-// update later
-session.update(
-    TimerCard(
-        title = "Tea timer",
-        icon = IconCompat.createWithResource(context, R.drawable.ic_timer),
-        totalDuration = 5.minutes,
-        remainingDuration = 3.minutes,
-        isCountDown = true,
-        accentColor = 0xFFFF9800.toInt()
-    )
-)
-
-// keep the notification, hide promoted / Samsung surface
-session.dismiss()
-
-// cancel everything
-session.stop()
+session.update(card)  // update with new data
+session.dismiss()     // keep notification, hide Now Bar surface
+session.stop()        // cancel everything
 ```
 
-### Notes
+<details>
+<summary><b>Navigation example</b></summary>
 
-- If you do not need session state, you can build or post notifications directly through [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt).
-- For long-running flows, use [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt).
-- SDK-managed `notify` / `session` posting is skipped when the app cannot post notifications, for example when `POST_NOTIFICATIONS` is denied on Android 13+.
-- `FallbackStrategy.AUTO` uses Samsung / Android 16 enhancements when available, otherwise keeps a plain ongoing notification.
-- `FallbackStrategy.STANDARD_NOTIFICATION` always keeps a plain ongoing notification and never requests native enhancements.
-- `FallbackStrategy.NONE` posts only when a native Samsung / Android 16 surface is available.
-- `NowBarForegroundService` still has to keep a foreground notification because Android requires it, so `FallbackStrategy` there affects rendering, not the fact that `startForeground()` is used.
+```kotlin
+val card = NavigationCard.Builder.create(
+    title = "Navigation",
+    icon = IconCompat.createWithResource(context, R.drawable.ic_navigation),
+    nextDirection = "Turn right onto Main St",
+    distanceToTurn = "300 m"
+)
+    .eta("15:42")
+    .turnIcon(IconCompat.createWithResource(context, R.drawable.ic_turn_right))
+    .accentColor(0xFF4285F4.toInt())
+    .chipText("300 m - right")
+    .tapAction(pendingIntent)
+    .build()
+
+session.start(card)
+```
+
+</details>
+
+<details>
+<summary><b>Workout example</b></summary>
+
+```kotlin
+val card = WorkoutCard(
+    title = "Running",
+    icon = IconCompat.createWithResource(context, R.drawable.ic_run),
+    activityType = WorkoutType.RUNNING,
+    elapsed = 25.minutes,
+    distance = 3.5,
+    heartRate = 145,
+    calories = 280,
+    progress = 70,
+    accentColor = 0xFF0FCF6E.toInt(),
+    chipText = "3.5 km"
+)
+```
+
+</details>
+
+### Repository Layout
+
+```
+nowbar-sdk/
+├── nowbar/                     # Android library module
+│   └── src/main/kotlin/com/nowbar/api/
+│       ├── NowBarManager.kt           # Entry point
+│       ├── NowBarSession.kt           # Session API
+│       ├── NowBarConfig.kt            # Configuration
+│       ├── FeatureDetector.kt         # Platform detection
+│       ├── cards/                     # Card models
+│       ├── notification/              # Notification builders
+│       ├── fallback/                  # Fallback strategy
+│       ├── effects/                   # Visual effects
+│       ├── google/                    # Google integration
+│       ├── service/                   # Foreground service
+│       └── types/                     # Shared types
+├── examples/                   # Ready-to-copy examples
+│   ├── TimerSessionExample.kt
+│   ├── TimerNowBarService.kt
+│   ├── WorkoutNowBarService.kt
+│   ├── NavigationNowBarService.kt
+│   └── AndroidManifest.snippet.xml
+└── assets/
+```
+
+> [!TIP]
+> If you do not need session state, you can build or post notifications directly through [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt).
+
+> [!IMPORTANT]
+> `NowBarForegroundService` still has to keep a foreground notification because Android requires it, so `FallbackStrategy` there affects rendering, not the fact that `startForeground()` is used.
+
+<details>
+<summary><b>FallbackStrategy details</b></summary>
+
+| Strategy | Behavior |
+| --- | --- |
+| `AUTO` | Samsung / Android 16 enhancements when available, otherwise plain ongoing notification |
+| `STANDARD_NOTIFICATION` | Always plain ongoing notification, no native enhancements |
+| `NONE` | Posts only when a native Samsung / Android 16 surface is available |
+
+</details>
 
 ---
 
@@ -172,7 +260,7 @@ session.stop()
 
 ## 🇺🇦 Українська
 
-`nowbar-sdk` — це Android-бібліотека навколо пакета `com.nowbar.api`. Вона надає єдиний API для створення, оновлення, приховування та зупинки карток і ongoing-сповіщень у стилі Samsung Now Bar та Android 16 Live Updates.
+`nowbar-sdk` — це Android-бiблiотека навколо пакета `com.nowbar.api`. Вона надає єдиний API для створення, оновлення, приховування та зупинки карток i ongoing-сповіщень у стилі Samsung Now Bar та Android 16 Live Updates.
 
 ### Що всередині
 
@@ -183,15 +271,39 @@ session.stop()
 | Формат інтеграції | Папка [`nowbar/`](./nowbar) копіюється прямо у ваш проєкт |
 | Точки входу | Прямий manager API, session API та helper для foreground service |
 
-### Структура репозиторію
+### Архітектура
 
-- [`nowbar/`](./nowbar) - Android-бібліотека
-- [`examples/`](./examples) - готові приклади інтеграції
-- [`examples/TimerSessionExample.kt`](./examples/TimerSessionExample.kt) - приклад через session API
-- [`examples/TimerNowBarService.kt`](./examples/TimerNowBarService.kt) - приклад через foreground service
-- [`examples/WorkoutNowBarService.kt`](./examples/WorkoutNowBarService.kt) - приклад для workout-сценарію
-- [`examples/NavigationNowBarService.kt`](./examples/NavigationNowBarService.kt) - приклад для навігації
-- [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) - фрагмент manifest
+```mermaid
+graph TD
+    A[Ваш додаток] --> B[NowBarManager]
+    A --> C[NowBarSession]
+    A --> D[NowBarForegroundService]
+    B --> E[NowBarNotificationBuilder]
+    C --> E
+    D --> E
+    E --> F{FeatureDetector}
+    F -->|Samsung| G[OngoingExtrasBuilder]
+    F -->|Android 16+| H[LiveUpdateBuilder]
+    F -->|Інше| I[StandardNotificationAdapter]
+    G --> J[Now Bar]
+    H --> K[Live Update]
+    I --> L[Ongoing Notification]
+
+    style J fill:#a855f7,color:#fff
+    style K fill:#3b82f6,color:#fff
+    style L fill:#6b7280,color:#fff
+```
+
+### Типи карток
+
+| Картка | Сценарій | Samsung extras | Live Updates |
+| --- | --- | :---: | :---: |
+| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундомір | ✅ | ✅ |
+| [`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt) | Фітнес-трекінг | ✅ | ✅ |
+| [`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt) | Музика / подкасти | ✅ | ✅ |
+| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Вхідний / активний дзвінок | ✅ | ✅ |
+| [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Покрокова навігація | ✅ | ✅ |
+| [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Будь-який власний сценарій | ✅ | ✅ |
 
 ### Основне API
 
@@ -202,15 +314,6 @@ session.stop()
 | [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базовий helper для довгоживучих foreground service сценаріїв |
 | [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базова модель картки |
-
-### Доступні картки
-
-[`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt),
-[`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt),
-[`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt),
-[`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt),
-[`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt),
-[`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt)
 
 ### Підтримка платформ
 
@@ -245,7 +348,10 @@ dependencies {
 }
 ```
 
-4. Додайте потрібні записи в manifest, взявши їх із [`nowbar/src/main/AndroidManifest.xml`](./nowbar/src/main/AndroidManifest.xml) або [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml):
+<details>
+<summary><b>4. Налаштування manifest</b></summary>
+
+Додайте потрібні записи в manifest, взявши їх із [`nowbar/src/main/AndroidManifest.xml`](./nowbar/src/main/AndroidManifest.xml) або [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml):
 
 ```xml
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -260,9 +366,12 @@ dependencies {
 </application>
 ```
 
-5. На Android 13+ запитайте `POST_NOTIFICATIONS` як runtime permission.
+> [!NOTE]
+> `FOREGROUND_SERVICE_*` permissions залежать від типу сервісу. Наприклад, timer-сервіс використовує `specialUse`, а workout-приклад використовує `health|location`, тому в [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) додатково є `FOREGROUND_SERVICE_HEALTH`, `FOREGROUND_SERVICE_LOCATION` та `android:foregroundServiceType="health|location"` для цього сервісу.
 
-`FOREGROUND_SERVICE_*` permissions залежать від типу сервісу. Наприклад, timer-сервіс використовує `specialUse`, а workout-приклад використовує `health|location`, тому в [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) додатково є `FOREGROUND_SERVICE_HEALTH`, `FOREGROUND_SERVICE_LOCATION` та `android:foregroundServiceType="health|location"` для цього сервісу.
+</details>
+
+5. На Android 13+ запитайте `POST_NOTIFICATIONS` як runtime permission.
 
 ### Швидкий старт
 
@@ -287,34 +396,69 @@ session.start(
     )
 )
 
-// потім оновлюємо
-session.update(
-    TimerCard(
-        title = "Таймер чаю",
-        icon = IconCompat.createWithResource(context, R.drawable.ic_timer),
-        totalDuration = 5.minutes,
-        remainingDuration = 3.minutes,
-        isCountDown = true,
-        accentColor = 0xFFFF9800.toInt()
-    )
-)
-
-// залишаємо сповіщення, але приховуємо promoted / Samsung surface
-session.dismiss()
-
-// повністю зупиняємо
-session.stop()
+session.update(card)  // оновлюємо новими даними
+session.dismiss()     // залишаємо сповіщення, ховаємо Now Bar surface
+session.stop()        // повністю зупиняємо
 ```
 
-### Примітки
+<details>
+<summary><b>Приклад навігації</b></summary>
 
-- Якщо session API не потрібен, можна збирати й надсилати сповіщення безпосередньо через [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt).
-- Для довгоживущих сценаріїв є [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt).
-- SDK-прошарок для `notify` / `session` не публікує сповіщення, якщо застосунку зараз не можна їх показувати, наприклад, коли на Android 13+ не надано `POST_NOTIFICATIONS`.
-- `FallbackStrategy.AUTO` вмикає Samsung / Android 16 enhancements, коли вони доступні, і залишає звичайне ongoing-сповіщення в інших випадках.
-- `FallbackStrategy.STANDARD_NOTIFICATION` завжди залишає звичайне ongoing-сповіщення і не запитує нативні enhancements.
-- `FallbackStrategy.NONE` публікує тільки за наявності нативної Samsung / Android 16 поверхні.
-- `NowBarForegroundService` все одно зобов'язаний тримати foreground-сповіщення, тому що цього вимагає Android, тому там `FallbackStrategy` впливає на рендеринг, а не скасовує сам `startForeground()`.
+```kotlin
+val card = NavigationCard.Builder.create(
+    title = "Навігація",
+    icon = IconCompat.createWithResource(context, R.drawable.ic_navigation),
+    nextDirection = "Поверніть праворуч на вул. Головну",
+    distanceToTurn = "300 м"
+)
+    .eta("15:42")
+    .turnIcon(IconCompat.createWithResource(context, R.drawable.ic_turn_right))
+    .accentColor(0xFF4285F4.toInt())
+    .chipText("300 м - праворуч")
+    .tapAction(pendingIntent)
+    .build()
+
+session.start(card)
+```
+
+</details>
+
+<details>
+<summary><b>Приклад тренування</b></summary>
+
+```kotlin
+val card = WorkoutCard(
+    title = "Біг",
+    icon = IconCompat.createWithResource(context, R.drawable.ic_run),
+    activityType = WorkoutType.RUNNING,
+    elapsed = 25.minutes,
+    distance = 3.5,
+    heartRate = 145,
+    calories = 280,
+    progress = 70,
+    accentColor = 0xFF0FCF6E.toInt(),
+    chipText = "3.5 км"
+)
+```
+
+</details>
+
+> [!TIP]
+> Якщо session API не потрібен, можна збирати й надсилати сповіщення безпосередньо через [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt).
+
+> [!IMPORTANT]
+> `NowBarForegroundService` все одно зобов'язаний тримати foreground-сповіщення, тому що цього вимагає Android, тому там `FallbackStrategy` впливає на рендеринг, а не скасовує сам `startForeground()`.
+
+<details>
+<summary><b>Деталі FallbackStrategy</b></summary>
+
+| Стратегія | Поведінка |
+| --- | --- |
+| `AUTO` | Samsung / Android 16 enhancements, коли доступні, інакше звичайне ongoing-сповіщення |
+| `STANDARD_NOTIFICATION` | Завжди звичайне ongoing-сповіщення, без нативних enhancements |
+| `NONE` | Публікує тільки за наявності нативної Samsung / Android 16 поверхні |
+
+</details>
 
 ---
 
@@ -333,15 +477,39 @@ session.stop()
 | Формат интеграции | Папка [`nowbar/`](./nowbar) копируется прямо в ваш проект |
 | Точки входа | Прямой manager API, session API и helper для foreground service |
 
-### Структура репозитория
+### Архитектура
 
-- [`nowbar/`](./nowbar) - Android-библиотека
-- [`examples/`](./examples) - готовые примеры интеграции
-- [`examples/TimerSessionExample.kt`](./examples/TimerSessionExample.kt) - пример через session API
-- [`examples/TimerNowBarService.kt`](./examples/TimerNowBarService.kt) - пример через foreground service
-- [`examples/WorkoutNowBarService.kt`](./examples/WorkoutNowBarService.kt) - пример для workout-сценария
-- [`examples/NavigationNowBarService.kt`](./examples/NavigationNowBarService.kt) - пример для навигации
-- [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) - фрагмент manifest
+```mermaid
+graph TD
+    A[Ваше приложение] --> B[NowBarManager]
+    A --> C[NowBarSession]
+    A --> D[NowBarForegroundService]
+    B --> E[NowBarNotificationBuilder]
+    C --> E
+    D --> E
+    E --> F{FeatureDetector}
+    F -->|Samsung| G[OngoingExtrasBuilder]
+    F -->|Android 16+| H[LiveUpdateBuilder]
+    F -->|Другое| I[StandardNotificationAdapter]
+    G --> J[Now Bar]
+    H --> K[Live Update]
+    I --> L[Ongoing Notification]
+
+    style J fill:#a855f7,color:#fff
+    style K fill:#3b82f6,color:#fff
+    style L fill:#6b7280,color:#fff
+```
+
+### Типы карточек
+
+| Карточка | Сценарий | Samsung extras | Live Updates |
+| --- | --- | :---: | :---: |
+| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундомер | ✅ | ✅ |
+| [`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt) | Фитнес-трекинг | ✅ | ✅ |
+| [`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt) | Музыка / подкасты | ✅ | ✅ |
+| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Входящий / активный звонок | ✅ | ✅ |
+| [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Пошаговая навигация | ✅ | ✅ |
+| [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Любой пользовательский сценарий | ✅ | ✅ |
 
 ### Основное API
 
@@ -352,15 +520,6 @@ session.stop()
 | [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базовый helper для долгоживущих foreground service сценариев |
 | [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базовая модель карточки |
-
-### Доступные карточки
-
-[`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt),
-[`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt),
-[`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt),
-[`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt),
-[`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt),
-[`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt)
 
 ### Поддержка платформ
 
@@ -395,7 +554,10 @@ dependencies {
 }
 ```
 
-4. Добавьте нужные записи в manifest, взяв их из [`nowbar/src/main/AndroidManifest.xml`](./nowbar/src/main/AndroidManifest.xml) или [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml):
+<details>
+<summary><b>4. Настройка manifest</b></summary>
+
+Добавьте нужные записи в manifest, взяв их из [`nowbar/src/main/AndroidManifest.xml`](./nowbar/src/main/AndroidManifest.xml) или [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml):
 
 ```xml
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -410,9 +572,12 @@ dependencies {
 </application>
 ```
 
-5. На Android 13+ запросите `POST_NOTIFICATIONS` как runtime permission.
+> [!NOTE]
+> `FOREGROUND_SERVICE_*` permissions зависят от типа сервиса. Например, timer-сервис использует `specialUse`, а workout-пример использует `health|location`, поэтому в [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) дополнительно есть `FOREGROUND_SERVICE_HEALTH`, `FOREGROUND_SERVICE_LOCATION` и `android:foregroundServiceType="health|location"` для этого сервиса.
 
-`FOREGROUND_SERVICE_*` permissions зависят от типа сервиса. Например, timer-сервис использует `specialUse`, а workout-пример использует `health|location`, поэтому в [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) дополнительно есть `FOREGROUND_SERVICE_HEALTH`, `FOREGROUND_SERVICE_LOCATION` и `android:foregroundServiceType="health|location"` для этого сервиса.
+</details>
+
+5. На Android 13+ запросите `POST_NOTIFICATIONS` как runtime permission.
 
 ### Быстрый старт
 
@@ -437,34 +602,69 @@ session.start(
     )
 )
 
-// потом обновляем
-session.update(
-    TimerCard(
-        title = "Таймер чая",
-        icon = IconCompat.createWithResource(context, R.drawable.ic_timer),
-        totalDuration = 5.minutes,
-        remainingDuration = 3.minutes,
-        isCountDown = true,
-        accentColor = 0xFFFF9800.toInt()
-    )
-)
-
-// оставляем уведомление, но скрываем promoted / Samsung surface
-session.dismiss()
-
-// полностью останавливаем
-session.stop()
+session.update(card)  // обновляем новыми данными
+session.dismiss()     // оставляем уведомление, скрываем Now Bar surface
+session.stop()        // полностью останавливаем
 ```
 
-### Примечания
+<details>
+<summary><b>Пример навигации</b></summary>
 
-- Если session API не нужен, можно собирать и отправлять уведомления напрямую через [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt).
-- Для долгоживущих сценариев есть [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt).
-- SDK-прослойка для `notify` / `session` не постит уведомление, если приложению сейчас нельзя их показывать, например когда на Android 13+ не выдан `POST_NOTIFICATIONS`.
-- `FallbackStrategy.AUTO` включает Samsung / Android 16 enhancements, когда они доступны, и оставляет обычное ongoing-уведомление в остальных случаях.
-- `FallbackStrategy.STANDARD_NOTIFICATION` всегда оставляет обычное ongoing-уведомление и не запрашивает нативные enhancements.
-- `FallbackStrategy.NONE` постит только при наличии нативной Samsung / Android 16 поверхности.
-- `NowBarForegroundService` всё равно обязан держать foreground-уведомление, потому что этого требует Android, поэтому там `FallbackStrategy` влияет на рендеринг, а не отменяет сам `startForeground()`.
+```kotlin
+val card = NavigationCard.Builder.create(
+    title = "Навигация",
+    icon = IconCompat.createWithResource(context, R.drawable.ic_navigation),
+    nextDirection = "Поверните направо на ул. Пушкина",
+    distanceToTurn = "300 м"
+)
+    .eta("15:42")
+    .turnIcon(IconCompat.createWithResource(context, R.drawable.ic_turn_right))
+    .accentColor(0xFF4285F4.toInt())
+    .chipText("300 м - направо")
+    .tapAction(pendingIntent)
+    .build()
+
+session.start(card)
+```
+
+</details>
+
+<details>
+<summary><b>Пример тренировки</b></summary>
+
+```kotlin
+val card = WorkoutCard(
+    title = "Бег",
+    icon = IconCompat.createWithResource(context, R.drawable.ic_run),
+    activityType = WorkoutType.RUNNING,
+    elapsed = 25.minutes,
+    distance = 3.5,
+    heartRate = 145,
+    calories = 280,
+    progress = 70,
+    accentColor = 0xFF0FCF6E.toInt(),
+    chipText = "3.5 км"
+)
+```
+
+</details>
+
+> [!TIP]
+> Если session API не нужен, можно собирать и отправлять уведомления напрямую через [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt).
+
+> [!IMPORTANT]
+> `NowBarForegroundService` всё равно обязан держать foreground-уведомление, потому что этого требует Android, поэтому там `FallbackStrategy` влияет на рендеринг, а не отменяет сам `startForeground()`.
+
+<details>
+<summary><b>Детали FallbackStrategy</b></summary>
+
+| Стратегия | Поведение |
+| --- | --- |
+| `AUTO` | Samsung / Android 16 enhancements, когда доступны, иначе обычное ongoing-уведомление |
+| `STANDARD_NOTIFICATION` | Всегда обычное ongoing-уведомление, без нативных enhancements |
+| `NONE` | Постит только при наличии нативной Samsung / Android 16 поверхности |
+
+</details>
 
 ---
 
@@ -472,7 +672,7 @@ session.stop()
 
 ## 🇧🇾 Беларуская
 
-`nowbar-sdk` — гэта Android-бібліятэка вакол пакета `com.nowbar.api`. Яна дае адзіны API для стварэння, абнаўлення, хавання і прыпынення картак і ongoing-апавяшчэнняў у стылі Samsung Now Bar і Android 16 Live Updates.
+`nowbar-sdk` — гэта Android-бiблiятэка вакол пакета `com.nowbar.api`. Яна дае адзіны API для стварэння, абнаўлення, хавання і прыпынення картак i ongoing-апавяшчэнняў у стылі Samsung Now Bar і Android 16 Live Updates.
 
 ### Што ўнутры
 
@@ -483,15 +683,39 @@ session.stop()
 | Фармат інтэграцыі | Тэчка [`nowbar/`](./nowbar) капіруецца прама ў ваш праект |
 | Кропкі ўваходу | Прамы manager API, session API і helper для foreground service |
 
-### Структура рэпазіторыя
+### Архітэктура
 
-- [`nowbar/`](./nowbar) - Android-бібліятэка
-- [`examples/`](./examples) - гатовыя прыклады інтэграцыі
-- [`examples/TimerSessionExample.kt`](./examples/TimerSessionExample.kt) - прыклад праз session API
-- [`examples/TimerNowBarService.kt`](./examples/TimerNowBarService.kt) - прыклад праз foreground service
-- [`examples/WorkoutNowBarService.kt`](./examples/WorkoutNowBarService.kt) - прыклад для workout-сцэнарыя
-- [`examples/NavigationNowBarService.kt`](./examples/NavigationNowBarService.kt) - прыклад для навігацыі
-- [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) - фрагмент manifest
+```mermaid
+graph TD
+    A[Ваш дадатак] --> B[NowBarManager]
+    A --> C[NowBarSession]
+    A --> D[NowBarForegroundService]
+    B --> E[NowBarNotificationBuilder]
+    C --> E
+    D --> E
+    E --> F{FeatureDetector}
+    F -->|Samsung| G[OngoingExtrasBuilder]
+    F -->|Android 16+| H[LiveUpdateBuilder]
+    F -->|Іншае| I[StandardNotificationAdapter]
+    G --> J[Now Bar]
+    H --> K[Live Update]
+    I --> L[Ongoing Notification]
+
+    style J fill:#a855f7,color:#fff
+    style K fill:#3b82f6,color:#fff
+    style L fill:#6b7280,color:#fff
+```
+
+### Тыпы картак
+
+| Картка | Сцэнарый | Samsung extras | Live Updates |
+| --- | --- | :---: | :---: |
+| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундамер | ✅ | ✅ |
+| [`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt) | Фітнес-трэкінг | ✅ | ✅ |
+| [`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt) | Музыка / падкасты | ✅ | ✅ |
+| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Уваходны / актыўны званок | ✅ | ✅ |
+| [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Пакрокавая навігацыя | ✅ | ✅ |
+| [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Любы ўласны сцэнарый | ✅ | ✅ |
 
 ### Асноўнае API
 
@@ -502,15 +726,6 @@ session.stop()
 | [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базавы helper для доўгажывучых foreground service сцэнарыяў |
 | [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базавая мадэль карткі |
-
-### Даступныя карткі
-
-[`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt),
-[`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt),
-[`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt),
-[`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt),
-[`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt),
-[`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt)
 
 ### Падтрымка платформ
 
@@ -545,7 +760,10 @@ dependencies {
 }
 ```
 
-4. Дадайце патрэбныя запісы ў manifest, узяўшы іх з [`nowbar/src/main/AndroidManifest.xml`](./nowbar/src/main/AndroidManifest.xml) або [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml):
+<details>
+<summary><b>4. Наладка manifest</b></summary>
+
+Дадайце патрэбныя запісы ў manifest, узяўшы іх з [`nowbar/src/main/AndroidManifest.xml`](./nowbar/src/main/AndroidManifest.xml) або [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml):
 
 ```xml
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -560,9 +778,12 @@ dependencies {
 </application>
 ```
 
-5. На Android 13+ запытайце `POST_NOTIFICATIONS` як runtime permission.
+> [!NOTE]
+> `FOREGROUND_SERVICE_*` permissions залежаць ад тыпу сэрвісу. Напрыклад, timer-сэрвіс выкарыстоўвае `specialUse`, а workout-прыклад выкарыстоўвае `health|location`, таму ў [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) дадаткова ёсць `FOREGROUND_SERVICE_HEALTH`, `FOREGROUND_SERVICE_LOCATION` і `android:foregroundServiceType="health|location"` для гэтага сэрвісу.
 
-`FOREGROUND_SERVICE_*` permissions залежаць ад тыпу сэрвісу. Напрыклад, timer-сэрвіс выкарыстоўвае `specialUse`, а workout-прыклад выкарыстоўвае `health|location`, таму ў [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) дадаткова ёсць `FOREGROUND_SERVICE_HEALTH`, `FOREGROUND_SERVICE_LOCATION` і `android:foregroundServiceType="health|location"` для гэтага сэрвісу.
+</details>
+
+5. На Android 13+ запытайце `POST_NOTIFICATIONS` як runtime permission.
 
 ### Хуткі старт
 
@@ -587,31 +808,72 @@ session.start(
     )
 )
 
-// потым абнаўляем
-session.update(
-    TimerCard(
-        title = "Таймер гарбаты",
-        icon = IconCompat.createWithResource(context, R.drawable.ic_timer),
-        totalDuration = 5.minutes,
-        remainingDuration = 3.minutes,
-        isCountDown = true,
-        accentColor = 0xFFFF9800.toInt()
-    )
-)
-
-// пакідаем апавяшчэнне, але хаваем promoted / Samsung surface
-session.dismiss()
-
-// цалкам спыняем
-session.stop()
+session.update(card)  // абнаўляем новымі данымі
+session.dismiss()     // пакідаем апавяшчэнне, хаваем Now Bar surface
+session.stop()        // цалкам спыняем
 ```
 
-### Заўвагі
+<details>
+<summary><b>Прыклад навігацыі</b></summary>
 
-- Калі session API не патрэбны, можна збіраць і адпраўляць апавяшчэнні наўпрост праз [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt).
-- Для доўгажывучых сцэнарыяў ёсць [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt).
-- SDK-праслойка для `notify` / `session` не посціць апавяшчэнне, калі праграме зараз нельга іх паказваць, напрыклад калі на Android 13+ не выдадзены `POST_NOTIFICATIONS`.
-- `FallbackStrategy.AUTO` ўключае Samsung / Android 16 enhancements, калі яны даступныя, і пакідае звычайнае ongoing-апавяшчэнне ў астатніх выпадках.
-- `FallbackStrategy.STANDARD_NOTIFICATION` заўсёды пакідае звычайнае ongoing-апавяшчэнне і не запытвае натыўныя enhancements.
-- `FallbackStrategy.NONE` посціць толькі пры наяўнасці натыўнай Samsung / Android 16 паверхні.
-- `NowBarForegroundService` усё роўна абавязаны трымаць foreground-апавяшчэнне, таму што гэтага патрабуе Android, таму там `FallbackStrategy` ўплывае на рэндэрынг, а не адмяняе сам `startForeground()`.
+```kotlin
+val card = NavigationCard.Builder.create(
+    title = "Навігацыя",
+    icon = IconCompat.createWithResource(context, R.drawable.ic_navigation),
+    nextDirection = "Павярніце направа на вул. Галоўную",
+    distanceToTurn = "300 м"
+)
+    .eta("15:42")
+    .turnIcon(IconCompat.createWithResource(context, R.drawable.ic_turn_right))
+    .accentColor(0xFF4285F4.toInt())
+    .chipText("300 м - направа")
+    .tapAction(pendingIntent)
+    .build()
+
+session.start(card)
+```
+
+</details>
+
+<details>
+<summary><b>Прыклад трэніроўкі</b></summary>
+
+```kotlin
+val card = WorkoutCard(
+    title = "Бег",
+    icon = IconCompat.createWithResource(context, R.drawable.ic_run),
+    activityType = WorkoutType.RUNNING,
+    elapsed = 25.minutes,
+    distance = 3.5,
+    heartRate = 145,
+    calories = 280,
+    progress = 70,
+    accentColor = 0xFF0FCF6E.toInt(),
+    chipText = "3.5 км"
+)
+```
+
+</details>
+
+> [!TIP]
+> Калі session API не патрэбны, можна збіраць і адпраўляць апавяшчэнні наўпрост праз [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt).
+
+> [!IMPORTANT]
+> `NowBarForegroundService` усё роўна абавязаны трымаць foreground-апавяшчэнне, таму што гэтага патрабуе Android, таму там `FallbackStrategy` ўплывае на рэндэрынг, а не адмяняе сам `startForeground()`.
+
+<details>
+<summary><b>Дэталі FallbackStrategy</b></summary>
+
+| Стратэгія | Паводзіны |
+| --- | --- |
+| `AUTO` | Samsung / Android 16 enhancements, калі даступныя, інакш звычайнае ongoing-апавяшчэнне |
+| `STANDARD_NOTIFICATION` | Заўсёды звычайнае ongoing-апавяшчэнне, без натыўных enhancements |
+| `NONE` | Посціць толькі пры наяўнасці натыўнай Samsung / Android 16 паверхні |
+
+</details>
+
+---
+
+<p align="center">
+  <sub>Apache 2.0 License</sub>
+</p>
