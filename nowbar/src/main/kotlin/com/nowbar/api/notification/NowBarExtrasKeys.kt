@@ -68,6 +68,15 @@ object NowBarExtrasKeys {
     /** Segment start position within a segment bundle (Float, 0.0..1.0). */
     const val PROGRESS_SEGMENT_START = "android.ongoingActivityNoti.progressSegments.segmentStart"
 
+    /** Now Bar-specific icon, displayed in the Now Bar view (Parcelable, Icon). */
+    const val NOWBAR_ICON = "android.ongoingActivityNoti.nowbarIcon"
+
+    /** Secondary icon shown alongside the chip or in expanded Now Bar view (Parcelable, Icon). */
+    const val SECOND_ICON = "android.ongoingActivityNoti.secondIcon"
+
+    /** Now Bar-specific primary info text, separate from notification primaryInfo (String). */
+    const val NOWBAR_PRIMARY_INFO = "android.ongoingActivityNoti.nowbarPrimaryInfo"
+
     // ── Chronometer (standard Android extras) ───────────────────────────
 
     /** Whether to use countdown mode for the chronometer (Boolean). */

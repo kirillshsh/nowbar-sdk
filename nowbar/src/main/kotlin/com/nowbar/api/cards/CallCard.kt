@@ -46,6 +46,8 @@ data class CallCard(
 
     override fun toNowBarSecondaryInfo(): String = toSecondaryInfo()
 
+    override fun toNowBarPrimaryInfo(): String = callerName
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,

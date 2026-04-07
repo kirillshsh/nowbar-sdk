@@ -41,6 +41,7 @@ class LiveUpdateBuilder {
                     config.segments.map { segment ->
                         NotificationCompat.ProgressStyle.Segment(segment.length)
                             .setColor(segment.color)
+                            .setId(segment.id)
                     }
                 )
             }
@@ -50,6 +51,7 @@ class LiveUpdateBuilder {
                     config.points.map { point ->
                         NotificationCompat.ProgressStyle.Point(point.position)
                             .setColor(point.color)
+                            .setId(point.id)
                     }
                 )
             }

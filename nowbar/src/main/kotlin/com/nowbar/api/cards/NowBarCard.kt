@@ -30,4 +30,10 @@ sealed class NowBarCard(
     open fun toChipIcon(): IconCompat = icon
 
     open fun toChipBackgroundColor(): Int? = accentColor
+
+    open fun toNowBarIcon(): IconCompat? = null
+
+    open fun toSecondIcon(): IconCompat? = null
+
+    open fun toNowBarPrimaryInfo(): String? = null
 }

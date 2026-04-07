@@ -23,6 +23,9 @@ class OngoingExtrasBuilder {
         const val KEY_SEGMENT_START = "android.ongoingActivityNoti.progressSegments.segmentStart"
         const val KEY_SEGMENT_ICON = "android.ongoingActivityNoti.progressSegments.icon"
         const val KEY_SHOW_SMALL_ICON = "android.showSmallIcon"
+        const val KEY_NOWBAR_ICON = "android.ongoingActivityNoti.nowbarIcon"
+        const val KEY_SECOND_ICON = "android.ongoingActivityNoti.secondIcon"
+        const val KEY_NOWBAR_PRIMARY_INFO = "android.ongoingActivityNoti.nowbarPrimaryInfo"
 
         const val STYLE_NOTIFICATION_ONLY = 0
         const val STYLE_BOTH = 1
@@ -41,6 +44,9 @@ class OngoingExtrasBuilder {
     private var progressColor: Int? = null
     private var segments: List<ProgressSegment> = emptyList()
     private var showSmallIcon: Boolean = true
+    private var nowbarIcon: Icon? = null
+    private var secondIcon: Icon? = null
+    private var nowbarPrimaryInfo: String? = null
 
     fun setStyle(style: Int): OngoingExtrasBuilder = apply {
         this.style = style
@@ -87,6 +93,18 @@ class OngoingExtrasBuilder {
         this.showSmallIcon = show
     }
 
+    fun setNowBarIcon(icon: Icon): OngoingExtrasBuilder = apply {
+        this.nowbarIcon = icon
+    }
+
+    fun setSecondIcon(icon: Icon): OngoingExtrasBuilder = apply {
+        this.secondIcon = icon
+    }
+
+    fun setNowBarPrimaryInfo(text: String): OngoingExtrasBuilder = apply {
+        this.nowbarPrimaryInfo = text
+    }
+
     fun build(): Bundle {
         val bundle = Bundle()
 
@@ -110,6 +128,9 @@ class OngoingExtrasBuilder {
         }
 
         progressColor?.let { bundle.putInt(KEY_PROGRESS_COLOR, it) }
+        nowbarIcon?.let { bundle.putParcelable(KEY_NOWBAR_ICON, it) }
+        secondIcon?.let { bundle.putParcelable(KEY_SECOND_ICON, it) }
+        nowbarPrimaryInfo?.let { bundle.putString(KEY_NOWBAR_PRIMARY_INFO, it) }
 
         if (segments.isNotEmpty()) {
             val segmentBundles = segments.map { segment ->

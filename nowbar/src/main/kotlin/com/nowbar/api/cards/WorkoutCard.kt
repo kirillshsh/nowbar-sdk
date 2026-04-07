@@ -73,6 +73,8 @@ data class WorkoutCard(
 
     override fun toProgressMax(): Int = 100
 
+    override fun toNowBarPrimaryInfo(): String = toPrimaryInfo()
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,

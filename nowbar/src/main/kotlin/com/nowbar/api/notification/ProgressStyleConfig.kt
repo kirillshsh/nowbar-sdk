@@ -17,11 +17,13 @@ data class ProgressStyleConfig(
 /** A colored segment in the progress bar with a relative length. */
 data class StyleSegment(
     val length: Int,
-    val color: Int
+    val color: Int,
+    val id: Int = 0
 )
 
 /** A milestone point at a specific position on the progress bar. */
 data class StylePoint(
     val position: Int,
-    val color: Int
+    val color: Int,
+    val id: Int = 0
 )

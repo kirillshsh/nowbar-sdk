@@ -108,11 +108,30 @@ class NowBarNotificationBuilder(
             samsungSegments(card)
                 .takeIf { it.isNotEmpty() }
                 ?.let(::setProgressSegments)
+
+            card.toNowBarPrimaryInfo()
+                ?.takeIf { it.isNotBlank() }
+                ?.let(::setNowBarPrimaryInfo)
+
+            safeNowBarIcon(card)?.let(::setNowBarIcon)
+            safeSecondIcon(card)?.let(::setSecondIcon)
         }
         .build()
 
     private fun safeIcon(card: NowBarCard): Icon? {
         return runCatching { card.toChipIcon().toIcon(context) }.getOrNull()
+    }
+
+    private fun safeNowBarIcon(card: NowBarCard): Icon? {
+        return card.toNowBarIcon()?.let { icon ->
+            runCatching { icon.toIcon(context) }.getOrNull()
+        }
+    }
+
+    private fun safeSecondIcon(card: NowBarCard): Icon? {
+        return card.toSecondIcon()?.let { icon ->
+            runCatching { icon.toIcon(context) }.getOrNull()
+        }
     }
 
     private fun samsungProgressColor(card: NowBarCard): Int? = when (card) {

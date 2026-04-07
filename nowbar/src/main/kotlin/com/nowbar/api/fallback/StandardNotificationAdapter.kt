@@ -24,6 +24,10 @@ object StandardNotificationAdapter {
         card.accentColor?.let(builder::setColor)
         card.tapAction?.let(builder::setContentIntent)
 
+        card.toNowBarPrimaryInfo()
+            ?.takeIf { it.isNotBlank() && it != card.toPrimaryInfo() }
+            ?.let(builder::setSubText)
+
         card.toProgress()?.let { progress ->
             builder.setProgress(card.toProgressMax(), progress, false)
         }

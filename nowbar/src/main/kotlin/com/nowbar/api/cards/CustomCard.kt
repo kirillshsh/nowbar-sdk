@@ -33,6 +33,8 @@ data class CustomCard(
 
     override fun toProgressMax(): Int = progressMax
 
+    override fun toNowBarPrimaryInfo(): String = primaryText
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,

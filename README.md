@@ -40,6 +40,7 @@
 - [`examples/TimerSessionExample.kt`](./examples/TimerSessionExample.kt) - session API example
 - [`examples/TimerNowBarService.kt`](./examples/TimerNowBarService.kt) - foreground service example
 - [`examples/WorkoutNowBarService.kt`](./examples/WorkoutNowBarService.kt) - workout example
+- [`examples/NavigationNowBarService.kt`](./examples/NavigationNowBarService.kt) - navigation example
 - [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) - manifest snippet
 
 ### Core API
@@ -189,6 +190,7 @@ session.stop()
 - [`examples/TimerSessionExample.kt`](./examples/TimerSessionExample.kt) - приклад через session API
 - [`examples/TimerNowBarService.kt`](./examples/TimerNowBarService.kt) - приклад через foreground service
 - [`examples/WorkoutNowBarService.kt`](./examples/WorkoutNowBarService.kt) - приклад для workout-сценарію
+- [`examples/NavigationNowBarService.kt`](./examples/NavigationNowBarService.kt) - приклад для навігації
 - [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) - фрагмент manifest
 
 ### Основне API
@@ -338,6 +340,7 @@ session.stop()
 - [`examples/TimerSessionExample.kt`](./examples/TimerSessionExample.kt) - пример через session API
 - [`examples/TimerNowBarService.kt`](./examples/TimerNowBarService.kt) - пример через foreground service
 - [`examples/WorkoutNowBarService.kt`](./examples/WorkoutNowBarService.kt) - пример для workout-сценария
+- [`examples/NavigationNowBarService.kt`](./examples/NavigationNowBarService.kt) - пример для навигации
 - [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) - фрагмент manifest
 
 ### Основное API
@@ -487,6 +490,7 @@ session.stop()
 - [`examples/TimerSessionExample.kt`](./examples/TimerSessionExample.kt) - прыклад праз session API
 - [`examples/TimerNowBarService.kt`](./examples/TimerNowBarService.kt) - прыклад праз foreground service
 - [`examples/WorkoutNowBarService.kt`](./examples/WorkoutNowBarService.kt) - прыклад для workout-сцэнарыя
+- [`examples/NavigationNowBarService.kt`](./examples/NavigationNowBarService.kt) - прыклад для навігацыі
 - [`examples/AndroidManifest.snippet.xml`](./examples/AndroidManifest.snippet.xml) - фрагмент manifest
 
 ### Асноўнае API

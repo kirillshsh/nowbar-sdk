@@ -34,6 +34,8 @@ data class MediaCard(
         }
     }
 
+    override fun toNowBarPrimaryInfo(): String = title
+
     class Builder(
         private val title: String,
         private val icon: IconCompat

@@ -47,6 +47,8 @@ data class TimerCard(
 
     override fun toProgressMax(): Int = 100
 
+    override fun toNowBarPrimaryInfo(): String = toSecondaryInfo()
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,
