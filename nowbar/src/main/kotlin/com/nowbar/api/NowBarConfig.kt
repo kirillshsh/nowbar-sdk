@@ -20,7 +20,8 @@ data class NowBarConfig(
     val fallbackStrategy: FallbackStrategy = FallbackStrategy.AUTO,
     val samsungStyle: Int = STYLE_BOTH,
     val requestPromotedOngoing: Boolean = true,
-    val showSmallIcon: Boolean = true
+    val showSmallIcon: Boolean = true,
+    val actionPrimarySet: Int = 1
 ) {
     companion object {
         const val DEFAULT_NOTIFICATION_ID = 200

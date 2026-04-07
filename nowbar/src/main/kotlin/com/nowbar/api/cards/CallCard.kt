@@ -16,7 +16,8 @@ data class CallCard(
     val callDuration: Duration? = null,
     val answerAction: PendingIntent? = null,
     val declineAction: PendingIntent? = null,
-    val hangupAction: PendingIntent? = null
+    val hangupAction: PendingIntent? = null,
+    val secondaryInfoIcon: IconCompat? = null
 ) : NowBarCard(
     type = CardType.CALL,
     title = title,
@@ -48,6 +49,10 @@ data class CallCard(
 
     override fun toNowBarPrimaryInfo(): String = callerName
 
+    override fun toSubstName(): String = title
+
+    override fun toSecondaryInfoIcon(): IconCompat? = secondaryInfoIcon
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,
@@ -62,6 +67,7 @@ data class CallCard(
         private var answerAction: PendingIntent? = null
         private var declineAction: PendingIntent? = null
         private var hangupAction: PendingIntent? = null
+        private var secondaryInfoIcon: IconCompat? = null
 
         fun accentColor(color: Int) = apply { this.accentColor = color }
         fun tapAction(action: PendingIntent) = apply { this.tapAction = action }
@@ -72,6 +78,7 @@ data class CallCard(
         fun answerAction(action: PendingIntent) = apply { this.answerAction = action }
         fun declineAction(action: PendingIntent) = apply { this.declineAction = action }
         fun hangupAction(action: PendingIntent) = apply { this.hangupAction = action }
+        fun secondaryInfoIcon(icon: IconCompat) = apply { this.secondaryInfoIcon = icon }
 
         fun build(): CallCard = CallCard(
             title = title,
@@ -85,7 +92,8 @@ data class CallCard(
             callDuration = callDuration,
             answerAction = answerAction,
             declineAction = declineAction,
-            hangupAction = hangupAction
+            hangupAction = hangupAction,
+            secondaryInfoIcon = secondaryInfoIcon
         )
 
         companion object {

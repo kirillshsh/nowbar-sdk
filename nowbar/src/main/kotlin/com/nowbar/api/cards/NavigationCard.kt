@@ -35,6 +35,8 @@ data class NavigationCard(
 
     override fun toNowBarPrimaryInfo(): String = distanceToTurn
 
+    override fun toSubstName(): String = title
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,

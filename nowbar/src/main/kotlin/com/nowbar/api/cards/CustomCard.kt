@@ -14,7 +14,10 @@ data class CustomCard(
     val nowBarText: String? = null,
     val progressValue: Int? = null,
     val progressMax: Int = 100,
-    val customProgressColor: Int? = null
+    val customProgressColor: Int? = null,
+    val firstIcon: IconCompat? = null,
+    val secondaryInfoIcon: IconCompat? = null,
+    val subScreenIntent: PendingIntent? = null
 ) : NowBarCard(
     type = CardType.CUSTOM,
     title = title,
@@ -35,6 +38,14 @@ data class CustomCard(
 
     override fun toNowBarPrimaryInfo(): String = primaryText
 
+    override fun toSubstName(): String = title
+
+    override fun toFirstIcon(): IconCompat? = firstIcon
+
+    override fun toSecondaryInfoIcon(): IconCompat? = secondaryInfoIcon
+
+    override fun toNowBarSubScreenIntent(): PendingIntent? = subScreenIntent
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,
@@ -48,6 +59,9 @@ data class CustomCard(
         private var progressValue: Int? = null
         private var progressMax: Int = 100
         private var customProgressColor: Int? = null
+        private var firstIcon: IconCompat? = null
+        private var secondaryInfoIcon: IconCompat? = null
+        private var subScreenIntent: PendingIntent? = null
 
         fun accentColor(color: Int) = apply { this.accentColor = color }
         fun tapAction(action: PendingIntent) = apply { this.tapAction = action }
@@ -57,6 +71,9 @@ data class CustomCard(
         fun progressValue(value: Int) = apply { this.progressValue = value }
         fun progressMax(max: Int) = apply { this.progressMax = max }
         fun customProgressColor(color: Int) = apply { this.customProgressColor = color }
+        fun firstIcon(icon: IconCompat) = apply { this.firstIcon = icon }
+        fun secondaryInfoIcon(icon: IconCompat) = apply { this.secondaryInfoIcon = icon }
+        fun subScreenIntent(intent: PendingIntent) = apply { this.subScreenIntent = intent }
 
         fun build(): CustomCard = CustomCard(
             title = title,
@@ -69,7 +86,10 @@ data class CustomCard(
             nowBarText = nowBarText,
             progressValue = progressValue,
             progressMax = progressMax,
-            customProgressColor = customProgressColor
+            customProgressColor = customProgressColor,
+            firstIcon = firstIcon,
+            secondaryInfoIcon = secondaryInfoIcon,
+            subScreenIntent = subScreenIntent
         )
 
         companion object {
