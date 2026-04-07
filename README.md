@@ -34,10 +34,11 @@
 
 | Capability | Details |
 | --- | --- |
-| Native surfaces | Samsung Now Bar and Android 16 Live Updates |
+| Native surfaces | Samsung Now Bar (extras from Health, Clock, Voice Recorder) and Android 16 Live Updates |
 | Fallback | Standard ongoing notification via `FallbackStrategy` |
 | Integration style | Copy the [`nowbar/`](./nowbar) module into your project |
 | Entry points | Direct manager API, session API, foreground service helper |
+| Samsung extras | Chronometer, capsule, app icon loading, action buttons, sub-screen intents |
 
 ### Architecture
 
@@ -73,6 +74,26 @@ graph TD
 | [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Turn-by-turn navigation | ✅ | ✅ |
 | [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Any custom scenario | ✅ | ✅ |
 
+<details>
+<summary><b>Samsung Now Bar extras</b></summary>
+
+Extras keys extracted from decompiled Samsung apps (Health, Clock, Voice Recorder):
+
+| Category | Key | Type | Source |
+| --- | --- | --- | --- |
+| Chip | `chipBgColor`, `chipIcon`, `chipExpandedText` | Int / Icon / String | Health |
+| Content | `primaryInfo`, `secondaryInfo`, `nowbarSecondaryInfo`, `nowbarPrimaryInfo` | String | Health |
+| Icons | `nowbarIcon`, `secondIcon`, `firstIcon`, `secondaryInfoIcon` | Icon | Health, Voice Recorder |
+| Style | `style` (0 = notification only, 1 = both, 2 = Now Bar only) | Int | Health, Voice Recorder |
+| Action | `actionType` (0 = icon, 1 = text), `actionBgColor`, `actionPrimarySet` | Int | Voice Recorder |
+| Progress | `progress`, `progressMax`, `progressSegments`, `progressColor` | Int / Bundle[] | Health |
+| Chronometer | `chronometerRemoteView`, `chronometerRemoteViewTag`, `chronometerRemoteViewPosition` | RemoteViews / String / Int | Voice Recorder |
+| Sub-screen | `nowbarPendingIntentOnSubScreen` | PendingIntent | Voice Recorder |
+| Capsule | `isCapsule`, `capsule_layout`, `capsule_action`, `bg_startColor`, `bg_endColor`, `capsule_priority` | Various | Voice Recorder |
+| Misc | `android.substName`, `android.showSmallIcon` | String / Boolean | Voice Recorder, Health |
+
+</details>
+
 ### Core API
 
 | API | Purpose |
@@ -82,6 +103,42 @@ graph TD
 | [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Helper base class for long-running foreground-service flows |
 | [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Base model for card content |
+| [`ChronometerConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ChronometerConfig.kt) | Live chronometer (RemoteViews) for Now Bar |
+| [`CapsuleConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/CapsuleConfig.kt) | Capsule widget for Samsung foldable covers |
+| [`AppIconHelper`](./nowbar/src/main/kotlin/com/nowbar/api/util/AppIconHelper.kt) | Load any app's icon by package name for Now Bar |
+| [`NowBarExtrasKeys`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarExtrasKeys.kt) | All discovered Samsung Now Bar extras keys |
+
+### Samsung Now Bar Extras
+
+The SDK supports all Samsung Now Bar extras discovered from decompiling Samsung Clock and Samsung Health:
+
+| Extra | Purpose |
+| --- | --- |
+| Chronometer | Live timer/stopwatch via `ChronometerConfig` with RemoteViews |
+| Capsule | Foldable cover widget via `CapsuleConfig` with gradient background |
+| Action Primary Set | Controls which button set appears in collapsed Now Bar |
+| Sub-Screen Intent | PendingIntent fired on Now Bar sub-screen tap |
+| Subst Name | Substitution name displayed in the notification |
+| App Icon Loading | Load any app's icon for chip/nowbar display via `AppIconHelper` |
+
+<details>
+<summary><b>App icon example</b></summary>
+
+```kotlin
+// Load another app's icon and use it in Now Bar
+val appIcon = AppIconHelper.getAppIconCompat(context, "com.example.targetapp")
+    ?: IconCompat.createWithResource(context, R.drawable.ic_default)
+
+// Samsung-optimized tray icon (falls back on non-Samsung)
+val trayIcon = AppIconHelper.getSamsungTrayIconCompat(context, "com.example.targetapp")
+
+val card = CustomCard.Builder("Download", appIcon, "Downloading...")
+    .progressValue(50)
+    .chipText("50%")
+    .build()
+```
+
+</details>
 
 ### Platform Support
 
@@ -217,22 +274,32 @@ val card = WorkoutCard(
 nowbar-sdk/
 ├── nowbar/                     # Android library module
 │   └── src/main/kotlin/com/nowbar/api/
-│       ├── NowBarManager.kt           # Entry point
-│       ├── NowBarSession.kt           # Session API
-│       ├── NowBarConfig.kt            # Configuration
-│       ├── FeatureDetector.kt         # Platform detection
+│       ├── NowBarManager.kt
+│       ├── NowBarSession.kt
+│       ├── NowBarConfig.kt
+│       ├── FeatureDetector.kt
 │       ├── cards/                     # Card models
-│       ├── notification/              # Notification builders
-│       ├── fallback/                  # Fallback strategy
-│       ├── effects/                   # Visual effects
-│       ├── google/                    # Google integration
-│       ├── service/                   # Foreground service
-│       └── types/                     # Shared types
-├── examples/                   # Ready-to-copy examples
+│       ├── notification/              # Notification builders + Samsung extras configs
+│       │   ├── OngoingExtrasBuilder.kt
+│       │   ├── NowBarNotificationBuilder.kt
+│       │   ├── LiveUpdateBuilder.kt
+│       │   ├── ChronometerConfig.kt
+│       │   ├── CapsuleConfig.kt
+│       │   └── ...
+│       ├── util/
+│       │   └── AppIconHelper.kt        # App icon loader
+│       ├── fallback/
+│       ├── effects/
+│       ├── google/
+│       ├── service/
+│       └── types/
+├── examples/
 │   ├── TimerSessionExample.kt
 │   ├── TimerNowBarService.kt
 │   ├── WorkoutNowBarService.kt
 │   ├── NavigationNowBarService.kt
+│   ├── ChronometerExample.kt
+│   ├── CapsuleExample.kt
 │   └── AndroidManifest.snippet.xml
 └── assets/
 ```
@@ -266,10 +333,11 @@ nowbar-sdk/
 
 | Можливість | Що це означає |
 | --- | --- |
-| Нативні поверхні | Samsung Now Bar та Android 16 Live Updates |
+| Нативні поверхні | Samsung Now Bar (extras з Health, Clock, Voice Recorder) та Android 16 Live Updates |
 | Фолбек | Звичайне ongoing-сповіщення через `FallbackStrategy` |
 | Формат інтеграції | Папка [`nowbar/`](./nowbar) копіюється прямо у ваш проєкт |
 | Точки входу | Прямий manager API, session API та helper для foreground service |
+| Samsung extras | Хронометр, капсула, завантаження іконок, кнопки дій, sub-screen intents |
 
 ### Архітектура
 
@@ -305,6 +373,26 @@ graph TD
 | [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Покрокова навігація | ✅ | ✅ |
 | [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Будь-який власний сценарій | ✅ | ✅ |
 
+<details>
+<summary><b>Samsung Now Bar extras</b></summary>
+
+Ключі extras, витягнуті з декомпільованих Samsung-додатків (Health, Clock, Voice Recorder):
+
+| Категорія | Ключ | Тип | Джерело |
+| --- | --- | --- | --- |
+| Chip | `chipBgColor`, `chipIcon`, `chipExpandedText` | Int / Icon / String | Health |
+| Контент | `primaryInfo`, `secondaryInfo`, `nowbarSecondaryInfo`, `nowbarPrimaryInfo` | String | Health |
+| Іконки | `nowbarIcon`, `secondIcon`, `firstIcon`, `secondaryInfoIcon` | Icon | Health, Voice Recorder |
+| Стиль | `style` (0 = тільки notification, 1 = обидва, 2 = тільки Now Bar) | Int | Health, Voice Recorder |
+| Дія | `actionType` (0 = іконка, 1 = текст), `actionBgColor`, `actionPrimarySet` | Int | Voice Recorder |
+| Прогрес | `progress`, `progressMax`, `progressSegments`, `progressColor` | Int / Bundle[] | Health |
+| Хронометр | `chronometerRemoteView`, `chronometerRemoteViewTag`, `chronometerRemoteViewPosition` | RemoteViews / String / Int | Voice Recorder |
+| Саб-екран | `nowbarPendingIntentOnSubScreen` | PendingIntent | Voice Recorder |
+| Капсула | `isCapsule`, `capsule_layout`, `capsule_action`, `bg_startColor`, `bg_endColor`, `capsule_priority` | Various | Voice Recorder |
+| Різне | `android.substName`, `android.showSmallIcon` | String / Boolean | Voice Recorder, Health |
+
+</details>
+
 ### Основне API
 
 | API | Для чого потрібне |
@@ -314,6 +402,42 @@ graph TD
 | [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базовий helper для довгоживучих foreground service сценаріїв |
 | [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базова модель картки |
+| [`ChronometerConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ChronometerConfig.kt) | Живий хронометр (RemoteViews) для Now Bar |
+| [`CapsuleConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/CapsuleConfig.kt) | Капсула для обкладинки складних Samsung |
+| [`AppIconHelper`](./nowbar/src/main/kotlin/com/nowbar/api/util/AppIconHelper.kt) | Завантаження іконки будь-якого додатку за package name |
+| [`NowBarExtrasKeys`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarExtrasKeys.kt) | Усі знайдені Samsung Now Bar extras ключі |
+
+### Samsung Now Bar Extras
+
+SDK підтримує всі Samsung Now Bar extras, знайдені при декомпіляції Samsung Clock та Samsung Health:
+
+| Extra | Призначення |
+| --- | --- |
+| Chronometer | Живий таймер/секундомір через `ChronometerConfig` з RemoteViews |
+| Capsule | Віджет для обкладинки складного пристрою через `CapsuleConfig` з градієнтним фоном |
+| Action Primary Set | Визначає, який набір кнопок показувати у згорнутому Now Bar |
+| Sub-Screen Intent | PendingIntent, що спрацьовує при натисканні на Now Bar sub-screen |
+| Subst Name | Замінне ім'я, що відображається у сповіщенні |
+| App Icon Loading | Завантаження іконки будь-якого додатку для chip/nowbar через `AppIconHelper` |
+
+<details>
+<summary><b>Приклад завантаження іконки</b></summary>
+
+```kotlin
+// Завантажити іконку іншого додатку та використати у Now Bar
+val appIcon = AppIconHelper.getAppIconCompat(context, "com.example.targetapp")
+    ?: IconCompat.createWithResource(context, R.drawable.ic_default)
+
+// Samsung-оптимізована tray-іконка (фолбек на не-Samsung)
+val trayIcon = AppIconHelper.getSamsungTrayIconCompat(context, "com.example.targetapp")
+
+val card = CustomCard.Builder("Download", appIcon, "Downloading...")
+    .progressValue(50)
+    .chipText("50%")
+    .build()
+```
+
+</details>
 
 ### Підтримка платформ
 
@@ -472,10 +596,11 @@ val card = WorkoutCard(
 
 | Возможность | Что это значит |
 | --- | --- |
-| Нативные поверхности | Samsung Now Bar и Android 16 Live Updates |
+| Нативные поверхности | Samsung Now Bar (extras из Health, Clock, Voice Recorder) и Android 16 Live Updates |
 | Фоллбек | Обычное ongoing-уведомление через `FallbackStrategy` |
 | Формат интеграции | Папка [`nowbar/`](./nowbar) копируется прямо в ваш проект |
 | Точки входа | Прямой manager API, session API и helper для foreground service |
+| Samsung extras | Хронометр, капсула, загрузка иконок, кнопки действий, sub-screen intents |
 
 ### Архитектура
 
@@ -511,6 +636,26 @@ graph TD
 | [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Пошаговая навигация | ✅ | ✅ |
 | [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Любой пользовательский сценарий | ✅ | ✅ |
 
+<details>
+<summary><b>Samsung Now Bar extras</b></summary>
+
+Ключи extras, извлечённые из декомпилированных Samsung-приложений (Health, Clock, Voice Recorder):
+
+| Категория | Ключ | Тип | Источник |
+| --- | --- | --- | --- |
+| Chip | `chipBgColor`, `chipIcon`, `chipExpandedText` | Int / Icon / String | Health |
+| Контент | `primaryInfo`, `secondaryInfo`, `nowbarSecondaryInfo`, `nowbarPrimaryInfo` | String | Health |
+| Иконки | `nowbarIcon`, `secondIcon`, `firstIcon`, `secondaryInfoIcon` | Icon | Health, Voice Recorder |
+| Стиль | `style` (0 = только notification, 1 = оба, 2 = только Now Bar) | Int | Health, Voice Recorder |
+| Действие | `actionType` (0 = иконка, 1 = текст), `actionBgColor`, `actionPrimarySet` | Int | Voice Recorder |
+| Прогресс | `progress`, `progressMax`, `progressSegments`, `progressColor` | Int / Bundle[] | Health |
+| Хронометр | `chronometerRemoteView`, `chronometerRemoteViewTag`, `chronometerRemoteViewPosition` | RemoteViews / String / Int | Voice Recorder |
+| Саб-экран | `nowbarPendingIntentOnSubScreen` | PendingIntent | Voice Recorder |
+| Капсула | `isCapsule`, `capsule_layout`, `capsule_action`, `bg_startColor`, `bg_endColor`, `capsule_priority` | Various | Voice Recorder |
+| Разное | `android.substName`, `android.showSmallIcon` | String / Boolean | Voice Recorder, Health |
+
+</details>
+
 ### Основное API
 
 | API | Для чего нужно |
@@ -520,6 +665,42 @@ graph TD
 | [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базовый helper для долгоживущих foreground service сценариев |
 | [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базовая модель карточки |
+| [`ChronometerConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ChronometerConfig.kt) | Живой хронометр (RemoteViews) для Now Bar |
+| [`CapsuleConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/CapsuleConfig.kt) | Капсула для обложки складных Samsung |
+| [`AppIconHelper`](./nowbar/src/main/kotlin/com/nowbar/api/util/AppIconHelper.kt) | Загрузка иконки любого приложения по package name |
+| [`NowBarExtrasKeys`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarExtrasKeys.kt) | Все найденные Samsung Now Bar extras ключи |
+
+### Samsung Now Bar Extras
+
+SDK поддерживает все Samsung Now Bar extras, найденные при декомпиляции Samsung Clock и Samsung Health:
+
+| Extra | Назначение |
+| --- | --- |
+| Chronometer | Живой таймер/секундомер через `ChronometerConfig` с RemoteViews |
+| Capsule | Виджет для обложки складного устройства через `CapsuleConfig` с градиентным фоном |
+| Action Primary Set | Определяет, какой набор кнопок показывать в свёрнутом Now Bar |
+| Sub-Screen Intent | PendingIntent, срабатывающий при нажатии на Now Bar sub-screen |
+| Subst Name | Подстановочное имя, отображаемое в уведомлении |
+| App Icon Loading | Загрузка иконки любого приложения для chip/nowbar через `AppIconHelper` |
+
+<details>
+<summary><b>Пример загрузки иконки</b></summary>
+
+```kotlin
+// Загрузить иконку другого приложения и использовать в Now Bar
+val appIcon = AppIconHelper.getAppIconCompat(context, "com.example.targetapp")
+    ?: IconCompat.createWithResource(context, R.drawable.ic_default)
+
+// Samsung-оптимизированная tray-иконка (фоллбек на не-Samsung)
+val trayIcon = AppIconHelper.getSamsungTrayIconCompat(context, "com.example.targetapp")
+
+val card = CustomCard.Builder("Download", appIcon, "Downloading...")
+    .progressValue(50)
+    .chipText("50%")
+    .build()
+```
+
+</details>
 
 ### Поддержка платформ
 
@@ -678,10 +859,11 @@ val card = WorkoutCard(
 
 | Магчымасць | Што гэта значыць |
 | --- | --- |
-| Натыўныя паверхні | Samsung Now Bar і Android 16 Live Updates |
+| Натыўныя паверхні | Samsung Now Bar (extras з Health, Clock, Voice Recorder) і Android 16 Live Updates |
 | Фалбэк | Звычайнае ongoing-апавяшчэнне праз `FallbackStrategy` |
 | Фармат інтэграцыі | Тэчка [`nowbar/`](./nowbar) капіруецца прама ў ваш праект |
 | Кропкі ўваходу | Прамы manager API, session API і helper для foreground service |
+| Samsung extras | Хранаметр, капсула, загрузка іконак, кнопкі дзеянняў, sub-screen intents |
 
 ### Архітэктура
 
@@ -717,6 +899,26 @@ graph TD
 | [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Пакрокавая навігацыя | ✅ | ✅ |
 | [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Любы ўласны сцэнарый | ✅ | ✅ |
 
+<details>
+<summary><b>Samsung Now Bar extras</b></summary>
+
+Ключы extras, выцягнутыя з дэкампіляваных Samsung-дадаткаў (Health, Clock, Voice Recorder):
+
+| Катэгорыя | Ключ | Тып | Крыніца |
+| --- | --- | --- | --- |
+| Chip | `chipBgColor`, `chipIcon`, `chipExpandedText` | Int / Icon / String | Health |
+| Кантэнт | `primaryInfo`, `secondaryInfo`, `nowbarSecondaryInfo`, `nowbarPrimaryInfo` | String | Health |
+| Іконкі | `nowbarIcon`, `secondIcon`, `firstIcon`, `secondaryInfoIcon` | Icon | Health, Voice Recorder |
+| Стыль | `style` (0 = толькі notification, 1 = абодва, 2 = толькі Now Bar) | Int | Health, Voice Recorder |
+| Дзеянне | `actionType` (0 = іконка, 1 = тэкст), `actionBgColor`, `actionPrimarySet` | Int | Voice Recorder |
+| Прагрэс | `progress`, `progressMax`, `progressSegments`, `progressColor` | Int / Bundle[] | Health |
+| Храnaметр | `chronometerRemoteView`, `chronometerRemoteViewTag`, `chronometerRemoteViewPosition` | RemoteViews / String / Int | Voice Recorder |
+| Саб-экран | `nowbarPendingIntentOnSubScreen` | PendingIntent | Voice Recorder |
+| Капсула | `isCapsule`, `capsule_layout`, `capsule_action`, `bg_startColor`, `bg_endColor`, `capsule_priority` | Various | Voice Recorder |
+| Рознае | `android.substName`, `android.showSmallIcon` | String / Boolean | Voice Recorder, Health |
+
+</details>
+
 ### Асноўнае API
 
 | API | Для чаго патрэбна |
@@ -726,6 +928,42 @@ graph TD
 | [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базавы helper для доўгажывучых foreground service сцэнарыяў |
 | [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базавая мадэль карткі |
+| [`ChronometerConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ChronometerConfig.kt) | Жывы хранаметр (RemoteViews) для Now Bar |
+| [`CapsuleConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/CapsuleConfig.kt) | Капсула для вокладкі складных Samsung |
+| [`AppIconHelper`](./nowbar/src/main/kotlin/com/nowbar/api/util/AppIconHelper.kt) | Загрузка іконкі любога дадатку па package name |
+| [`NowBarExtrasKeys`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarExtrasKeys.kt) | Усе знойдзеныя Samsung Now Bar extras ключы |
+
+### Samsung Now Bar Extras
+
+SDK падтрымлівае ўсе Samsung Now Bar extras, знойдзеныя пры дэкампіляцыі Samsung Clock і Samsung Health:
+
+| Extra | Прызначэнне |
+| --- | --- |
+| Chronometer | Жывы таймер/секундамер праз `ChronometerConfig` з RemoteViews |
+| Capsule | Віджэт для вокладкі складной прылады праз `CapsuleConfig` з градыентным фонам |
+| Action Primary Set | Вызначае, які набор кнопак паказваць у згорнутым Now Bar |
+| Sub-Screen Intent | PendingIntent, які спрацоўвае пры націсканні на Now Bar sub-screen |
+| Subst Name | Падстаноўчае імя, якое адлюстроўваецца ў апавяшчэнні |
+| App Icon Loading | Загрузка іконкі любога дадатку для chip/nowbar праз `AppIconHelper` |
+
+<details>
+<summary><b>Прыклад загрузкі іконкі</b></summary>
+
+```kotlin
+// Загрузіць іконку іншага дадатку і выкарыстаць у Now Bar
+val appIcon = AppIconHelper.getAppIconCompat(context, "com.example.targetapp")
+    ?: IconCompat.createWithResource(context, R.drawable.ic_default)
+
+// Samsung-аптымізаваная tray-іконка (фалбэк на не-Samsung)
+val trayIcon = AppIconHelper.getSamsungTrayIconCompat(context, "com.example.targetapp")
+
+val card = CustomCard.Builder("Download", appIcon, "Downloading...")
+    .progressValue(50)
+    .chipText("50%")
+    .build()
+```
+
+</details>
 
 ### Падтрымка платформ
 

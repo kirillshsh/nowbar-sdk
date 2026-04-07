@@ -45,6 +45,53 @@ object NowBarExtrasKeys {
     /** Action type for the Now Bar chip interaction (Int). 1 = button text style. */
     const val ACTION_TYPE = "android.ongoingActivityNoti.actionType"
 
+    /** Action primary button set for collapsed Now Bar (Int). 1 = primary action set. */
+    const val ACTION_PRIMARY_SET = "android.ongoingActivityNoti.actionPrimarySet"
+
+    // ── Chronometer (Now Bar live timer) ────────────────────────────────
+
+    /** Custom RemoteViews containing a live Chronometer widget (Parcelable, RemoteViews). */
+    const val CHRONOMETER_REMOTE_VIEW = "android.ongoingActivityNoti.chronometerRemoteView"
+
+    /** Tag identifier for the chronometer RemoteView (CharSequence). */
+    const val CHRONOMETER_REMOTE_VIEW_TAG = "android.ongoingActivityNoti.chronometerRemoteViewTag"
+
+    /** Position of the chronometer in the notification layout (Int). */
+    const val CHRONOMETER_REMOTE_VIEW_POSITION = "android.ongoingActivityNoti.chronometerRemoteViewPosition"
+
+    /** Position of the chronometer in the collapsed Now Bar view (Int). */
+    const val NOWBAR_CHRONOMETER_POSITION = "android.ongoingActivityNoti.nowbarChronometerPosition"
+
+    // ── Sub-Screen ──────────────────────────────────────────────────────
+
+    /** PendingIntent fired when the Now Bar sub-screen is tapped (Parcelable, PendingIntent). */
+    const val NOWBAR_PENDING_INTENT_ON_SUB_SCREEN = "android.ongoingActivityNoti.nowbarPendingIntentOnSubScreen"
+
+    // ── Substitution ────────────────────────────────────────────────────
+
+    /** Substitution name displayed in the notification (CharSequence). E.g. "Stopwatch", "Timer". */
+    const val SUBST_NAME = "android.substName"
+
+    // ── Capsule (Foldable Cover Widget) ─────────────────────────────────
+
+    /** Whether capsule layout is enabled (Boolean). */
+    const val IS_CAPSULE = "isCapsule"
+
+    /** Custom RemoteViews layout for the capsule widget (Parcelable, RemoteViews). */
+    const val CAPSULE_LAYOUT = "capsule_layout"
+
+    /** PendingIntent fired when the capsule is tapped (Parcelable, PendingIntent). */
+    const val CAPSULE_ACTION = "capsule_action"
+
+    /** Gradient start color for the capsule background (Int, @ColorInt). */
+    const val CAPSULE_BG_START_COLOR = "bg_startColor"
+
+    /** Gradient end color for the capsule background (Int, @ColorInt). */
+    const val CAPSULE_BG_END_COLOR = "bg_endColor"
+
+    /** Display priority for the capsule: "normal" or "low" (String). */
+    const val CAPSULE_PRIORITY = "capsule_priority"
+
     // ── Progress ────────────────────────────────────────────────────────
 
     /** Current progress value, 0..progressMax (Int). */
@@ -71,8 +118,17 @@ object NowBarExtrasKeys {
     /** Now Bar-specific icon, displayed in the Now Bar view (Parcelable, Icon). */
     const val NOWBAR_ICON = "android.ongoingActivityNoti.nowbarIcon"
 
+    /** Action button background color (Int, @ColorInt). */
+    const val ACTION_BG_COLOR = "android.ongoingActivityNoti.actionBgColor"
+
+    /** First icon displayed in the Now Bar view (Parcelable, Icon). */
+    const val FIRST_ICON = "android.ongoingActivityNoti.firstIcon"
+
     /** Secondary icon shown alongside the chip or in expanded Now Bar view (Parcelable, Icon). */
     const val SECOND_ICON = "android.ongoingActivityNoti.secondIcon"
+
+    /** Icon displayed next to secondary info text (Parcelable, Icon). */
+    const val SECONDARY_INFO_ICON = "android.ongoingActivityNoti.secondaryInfoIcon"
 
     /** Now Bar-specific primary info text, separate from notification primaryInfo (String). */
     const val NOWBAR_PRIMARY_INFO = "android.ongoingActivityNoti.nowbarPrimaryInfo"
@@ -93,11 +149,37 @@ object NowBarExtrasKeys {
 
         /** Display both notification and Now Bar chip. */
         const val BOTH = 1
+
+        /** Display Now Bar chip only, no notification shade entry. */
+        const val NOW_BAR_ONLY = 2
     }
 
     object ActionType {
+        /** Button with icon style (no text). */
+        const val ICON_BUTTON = 0
+
         /** Button with text style. */
         const val BUTTON_TEXT = 1
+    }
+
+    object CapsulePriority {
+        const val NORMAL = "normal"
+        const val LOW = "low"
+    }
+
+    /** Position of action buttons in the Now Bar chip. */
+    object ActionButtonPosition {
+        const val LEFT = 0
+        const val CENTER = 1
+        const val RIGHT = 2
+    }
+
+    /** Position of the chronometer RemoteView in the notification layout. */
+    object ChronometerPosition {
+        /** Replace primary info with the chronometer. */
+        const val PRIMARY_INFO = 1
+        /** Replace secondary info with the chronometer. */
+        const val SECONDARY_INFO = 2
     }
 
     // ── Notification Actions ────────────────────────────────────────────

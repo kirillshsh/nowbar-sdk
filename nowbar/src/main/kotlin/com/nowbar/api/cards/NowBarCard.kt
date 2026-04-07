@@ -36,4 +36,25 @@ sealed class NowBarCard(
     open fun toSecondIcon(): IconCompat? = null
 
     open fun toNowBarPrimaryInfo(): String? = null
+
+    /** Substitution name shown in the notification (e.g. "Stopwatch", "Timer"). */
+    open fun toSubstName(): String? = title
+
+    /** PendingIntent fired when the Now Bar sub-screen is tapped. */
+    open fun toNowBarSubScreenIntent(): PendingIntent? = null
+
+    /** Whether this card supports a live chronometer in the Now Bar. */
+    open fun hasChronometerSupport(): Boolean = false
+
+    /** Action primary set value for collapsed Now Bar buttons (typically 1). */
+    open fun toActionPrimarySet(): Int = 1
+
+    /** First/main icon for the Now Bar view, separate from chip icon. */
+    open fun toFirstIcon(): IconCompat? = null
+
+    /** Icon displayed next to secondary info text in the Now Bar. */
+    open fun toSecondaryInfoIcon(): IconCompat? = null
+
+    /** Action button background color for the Now Bar. */
+    open fun toActionBgColor(): Int? = accentColor
 }

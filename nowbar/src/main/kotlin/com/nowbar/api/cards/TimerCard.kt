@@ -13,7 +13,8 @@ data class TimerCard(
     val totalDuration: Duration,
     val remainingDuration: Duration,
     val isCountDown: Boolean = true,
-    val completionAction: PendingIntent? = null
+    val completionAction: PendingIntent? = null,
+    val subScreenIntent: PendingIntent? = null
 ) : NowBarCard(
     type = CardType.TIMER,
     title = title,
@@ -49,6 +50,12 @@ data class TimerCard(
 
     override fun toNowBarPrimaryInfo(): String = toSecondaryInfo()
 
+    override fun toSubstName(): String = title
+
+    override fun hasChronometerSupport(): Boolean = true
+
+    override fun toNowBarSubScreenIntent(): PendingIntent? = subScreenIntent
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,
@@ -60,6 +67,7 @@ data class TimerCard(
         private var remainingDuration: Duration = totalDuration
         private var isCountDown: Boolean = true
         private var completionAction: PendingIntent? = null
+        private var subScreenIntent: PendingIntent? = null
 
         fun accentColor(color: Int) = apply { this.accentColor = color }
         fun tapAction(action: PendingIntent) = apply { this.tapAction = action }
@@ -67,6 +75,7 @@ data class TimerCard(
         fun remainingDuration(duration: Duration) = apply { this.remainingDuration = duration }
         fun isCountDown(countDown: Boolean) = apply { this.isCountDown = countDown }
         fun completionAction(action: PendingIntent) = apply { this.completionAction = action }
+        fun subScreenIntent(intent: PendingIntent) = apply { this.subScreenIntent = intent }
 
         fun build(): TimerCard = TimerCard(
             title = title,
@@ -77,7 +86,8 @@ data class TimerCard(
             totalDuration = totalDuration,
             remainingDuration = remainingDuration,
             isCountDown = isCountDown,
-            completionAction = completionAction
+            completionAction = completionAction,
+            subScreenIntent = subScreenIntent
         )
 
         companion object {

@@ -25,7 +25,8 @@ data class WorkoutCard(
     val heartRate: Int? = null,
     val calories: Int? = null,
     val pace: String? = null,
-    val progress: Int = 0
+    val progress: Int = 0,
+    val actionBgColor: Int? = null
 ) : NowBarCard(
     type = CardType.WORKOUT,
     title = title,
@@ -75,6 +76,12 @@ data class WorkoutCard(
 
     override fun toNowBarPrimaryInfo(): String = toPrimaryInfo()
 
+    override fun toSubstName(): String = title
+
+    override fun toActionBgColor(): Int? = actionBgColor ?: accentColor
+
+    override fun hasChronometerSupport(): Boolean = true
+
     class Builder(
         private val title: String,
         private val icon: IconCompat,
@@ -90,6 +97,7 @@ data class WorkoutCard(
         private var calories: Int? = null
         private var pace: String? = null
         private var progress: Int = 0
+        private var actionBgColor: Int? = null
 
         fun accentColor(color: Int) = apply { this.accentColor = color }
         fun tapAction(action: PendingIntent) = apply { this.tapAction = action }
@@ -100,6 +108,7 @@ data class WorkoutCard(
         fun calories(cal: Int) = apply { this.calories = cal }
         fun pace(pace: String) = apply { this.pace = pace }
         fun progress(progress: Int) = apply { this.progress = progress }
+        fun actionBgColor(color: Int) = apply { this.actionBgColor = color }
 
         fun build(): WorkoutCard = WorkoutCard(
             title = title,
@@ -114,7 +123,8 @@ data class WorkoutCard(
             heartRate = heartRate,
             calories = calories,
             pace = pace,
-            progress = progress
+            progress = progress,
+            actionBgColor = actionBgColor
         )
 
         companion object {

@@ -75,6 +75,17 @@ class NowBarNotificationBuilder(
             builder.addExtras(buildSamsungExtras(card, samsungStyle))
         }
 
+        // Set substName and showSmallIcon directly on notification extras
+        // (Samsung Clock sets these on the builder extras separately from the ongoing bundle)
+        card.toSubstName()?.let { name ->
+            builder.addExtras(android.os.Bundle().apply {
+                putCharSequence("android.substName", name)
+            })
+        }
+        builder.addExtras(android.os.Bundle().apply {
+            putBoolean("android.showSmallIcon", config.showSmallIcon)
+        })
+
         return builder.build()
     }
 
@@ -93,6 +104,8 @@ class NowBarNotificationBuilder(
             )
         )
         .setPrimaryInfo(card.toPrimaryInfo())
+        // Action primary set for collapsed Now Bar buttons
+        .setActionPrimarySet(card.toActionPrimarySet())
         .apply {
             val secondary = card.toSecondaryInfo()
             if (secondary.isNotBlank()) setSecondaryInfo(secondary)
@@ -115,6 +128,13 @@ class NowBarNotificationBuilder(
 
             safeNowBarIcon(card)?.let(::setNowBarIcon)
             safeSecondIcon(card)?.let(::setSecondIcon)
+            safeFirstIcon(card)?.let(::setFirstIcon)
+            safeSecondaryInfoIcon(card)?.let(::setSecondaryInfoIcon)
+            card.toActionBgColor()?.let(::setActionBgColor)
+            setActionPrimarySet(config.actionPrimarySet)
+
+            card.toSubstName()?.takeIf { it.isNotBlank() }?.let(::setSubstName)
+            card.toNowBarSubScreenIntent()?.let(::setNowBarSubScreenIntent)
         }
         .build()
 
@@ -130,6 +150,18 @@ class NowBarNotificationBuilder(
 
     private fun safeSecondIcon(card: NowBarCard): Icon? {
         return card.toSecondIcon()?.let { icon ->
+            runCatching { icon.toIcon(context) }.getOrNull()
+        }
+    }
+
+    private fun safeFirstIcon(card: NowBarCard): Icon? {
+        return card.toFirstIcon()?.let { icon ->
+            runCatching { icon.toIcon(context) }.getOrNull()
+        }
+    }
+
+    private fun safeSecondaryInfoIcon(card: NowBarCard): Icon? {
+        return card.toSecondaryInfoIcon()?.let { icon ->
             runCatching { icon.toIcon(context) }.getOrNull()
         }
     }
