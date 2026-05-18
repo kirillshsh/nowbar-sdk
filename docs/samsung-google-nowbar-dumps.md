@@ -82,6 +82,11 @@ val extras = SamsungOngoingActivityDumpExtras.build(
         chipBackgroundColor = 0xff4285f4.toInt(),
         nowBarExpandableType = 0
     ),
+    progress = SamsungOngoingActivityProgress(
+        current = 65,
+        max = 100,
+        color = 0xff4285f4.toInt()
+    ),
     substName = "Google Finance"
 )
 
@@ -97,3 +102,23 @@ val notification = NotificationCompat.Builder(context, CHANNEL_ID)
 ```
 
 For the dump-style two-notification topology, post a summary notification built by `SamsungNowBarGroupSummaryBuilder` and then post the child notification with the same `groupKey`.
+If you are using the normal SDK manager/session path instead of the dump helper,
+`NowBarConfig(aodRemoteApp = SamsungRemoteAppConfig(...))` writes the same AOD app
+name, icon, and tap `PendingIntent` keys into every Samsung-extras notification.
+For manual bundles, `OngoingExtrasBuilder.setAodRemoteApp(SamsungRemoteAppConfig(...))`
+exposes the same key set directly.
+`NowBarNotificationEvidence.inspect(...)` reports this shape through `groupSummary`,
+`nativeOngoingActivityTemplate`, `aodRemoteAppName`, structured `aodRemoteApp`,
+structured `samsungViews`, per-RemoteViews booleans,
+`samsungRemoteViewCount`, `samsungDumpShow`, `samsungReducedImages`,
+`samsungPrimaryAction`, `samsungNowBarExpandableType`, visual icon flags,
+`samsungActionBackgroundColorCount`, optional `samsungText`, optional `samsungVisuals`,
+optional `samsungChronometerState`, and optional `pdeState`, which makes dump-style
+smoke artifacts easier to verify without relying only on broad key counts.
+Dump-style extras can also carry a `SamsungOngoingActivityProgress` payload; the
+inspector exposes it through the same structured `samsungNowBar.progress` state as the
+first-class Samsung extras path.
+For AndroidX ProgressStyle cards the same inspector also reports compat payload counts
+and icon flags from `android.progressSegments`, `android.progressPoints`,
+`android.progressTrackerIcon`, `android.progressStartIcon`, `android.progressEndIcon`,
+and `android.styledByProgress`.

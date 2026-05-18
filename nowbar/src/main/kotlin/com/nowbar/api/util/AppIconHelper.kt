@@ -7,9 +7,10 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
-import android.os.Build
 import android.util.Log
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
+import androidx.core.graphics.scale
 
 /**
  * Utility for loading application icons from any installed package for use in Now Bar.
@@ -53,11 +54,7 @@ object AppIconHelper {
      */
     fun getAppIcon(context: Context, packageName: String): Icon? {
         val bitmap = getAppIconBitmap(context, packageName) ?: return null
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Icon.createWithAdaptiveBitmap(bitmap)
-        } else {
-            Icon.createWithBitmap(bitmap)
-        }
+        return Icon.createWithAdaptiveBitmap(bitmap)
     }
 
     /**
@@ -125,15 +122,15 @@ object AppIconHelper {
 
     private fun drawableToBitmap(drawable: Drawable, size: Int = DEFAULT_ICON_SIZE): Bitmap {
         if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            return Bitmap.createScaledBitmap(drawable.bitmap, size, size, true)
+            return drawable.bitmap.scale(size, size)
         }
 
         val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else size
         val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else size
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(width, height)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
-        return Bitmap.createScaledBitmap(bitmap, size, size, true)
+        return bitmap.scale(size, size)
     }
 }

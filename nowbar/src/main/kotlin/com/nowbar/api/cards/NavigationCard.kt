@@ -12,14 +12,18 @@ data class NavigationCard(
     val nextDirection: String,
     val distanceToTurn: String,
     val eta: String? = null,
-    val turnIcon: IconCompat? = null
+    val turnIcon: IconCompat? = null,
+    override val deleteIntent: PendingIntent? = null,
+    override val largeIcon: IconCompat? = null
 ) : NowBarCard(
     type = CardType.NAVIGATION,
     title = title,
     icon = icon,
     accentColor = accentColor,
     tapAction = tapAction,
-    chipText = chipText
+    chipText = chipText,
+    deleteIntent = deleteIntent,
+    largeIcon = largeIcon
 ) {
     override fun toPrimaryInfo(): String = nextDirection
 
@@ -46,12 +50,16 @@ data class NavigationCard(
         private var accentColor: Int? = null
         private var tapAction: PendingIntent? = null
         private var chipText: String? = null
+        private var deleteIntent: PendingIntent? = null
+        private var largeIcon: IconCompat? = null
         private var eta: String? = null
         private var turnIcon: IconCompat? = null
 
         fun accentColor(color: Int) = apply { this.accentColor = color }
         fun tapAction(action: PendingIntent) = apply { this.tapAction = action }
         fun chipText(text: String) = apply { this.chipText = text }
+        fun deleteIntent(intent: PendingIntent) = apply { this.deleteIntent = intent }
+        fun largeIcon(icon: IconCompat) = apply { this.largeIcon = icon }
         fun eta(eta: String) = apply { this.eta = eta }
         fun turnIcon(icon: IconCompat) = apply { this.turnIcon = icon }
 
@@ -64,7 +72,9 @@ data class NavigationCard(
             nextDirection = nextDirection,
             distanceToTurn = distanceToTurn,
             eta = eta,
-            turnIcon = turnIcon
+            turnIcon = turnIcon,
+            deleteIntent = deleteIntent,
+            largeIcon = largeIcon
         )
 
         companion object {

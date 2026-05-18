@@ -4,7 +4,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.os.Build
 import androidx.core.app.NotificationManagerCompat
 import com.nowbar.api.cards.NowBarCard
 import com.nowbar.api.fallback.FallbackStrategyResolver
@@ -41,6 +40,14 @@ object NowBarManager {
     ): Notification =
         NowBarNotificationBuilder(context.applicationContext, config).build(card)
 
+    @JvmStatic
+    fun inspectReadiness(
+        context: Context,
+        config: NowBarConfig,
+        card: NowBarCard
+    ): NowBarReadinessReport =
+        NowBarReadiness.inspect(context, config, card)
+
     /**
      * Posts a notification immediately.
      *
@@ -54,6 +61,8 @@ object NowBarManager {
         card: NowBarCard
     ): Boolean {
         if (!shouldPost(context, config)) return false
+
+        createNotificationChannel(context, config)
 
         return SafeNotificationPoster.notify(
             context = context,
@@ -70,8 +79,6 @@ object NowBarManager {
 
     @JvmStatic
     fun createNotificationChannel(context: Context, config: NowBarConfig) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-
         val notificationManager = context.getSystemService(
             Context.NOTIFICATION_SERVICE
         ) as NotificationManager

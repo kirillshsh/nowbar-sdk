@@ -34,11 +34,19 @@ android {
     buildFeatures {
         buildConfig = false
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.18.0")
-    implementation("androidx.lifecycle:lifecycle-service:2.8.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    api("androidx.core:core-ktx:1.18.0")
+    api("androidx.lifecycle:lifecycle-service:2.10.0")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     testImplementation(kotlin("test"))
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
 }

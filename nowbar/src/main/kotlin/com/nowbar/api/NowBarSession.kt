@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
  * It only remembers the last card and lets you:
  * - start / resume,
  * - update,
- * - hide the promoted / Samsung surface but keep the notification,
+ * - unpin the promoted / Samsung surface but keep the notification,
  * - stop everything.
  */
 interface NowBarSession {
@@ -23,8 +23,13 @@ interface NowBarSession {
     fun update(card: NowBarCard)
 
     /**
-     * Keeps the notification, but removes the Samsung pill / promoted ongoing request
+     * Keeps the notification, but removes Samsung / promoted ongoing hints
      * by rebuilding the notification as plain ongoing.
+     */
+    fun unpin()
+
+    /**
+     * Compatibility alias for [unpin].
      */
     fun dismiss()
 

@@ -7,8 +7,11 @@ import androidx.core.app.NotificationCompat
 import com.nowbar.api.FeatureDetector
 import com.nowbar.api.NowBarConfig
 import com.nowbar.api.cards.CallCard
+import com.nowbar.api.cards.CallCardType
 import com.nowbar.api.cards.CustomCard
+import com.nowbar.api.cards.DeliveryCard
 import com.nowbar.api.cards.MediaCard
+import com.nowbar.api.cards.MetricCard
 import com.nowbar.api.cards.NavigationCard
 import com.nowbar.api.cards.NowBarCard
 import com.nowbar.api.cards.TimerCard
@@ -48,20 +51,46 @@ class NowBarNotificationBuilder(
             return StandardNotificationAdapter.build(context, config.channelId, card)
         }
 
+        val samsungExtras = if (FeatureDetector.canApplySamsungNowBarExtras(context)) {
+            buildSamsungExtras(card, samsungStyle)
+        } else {
+            null
+        }
+
+        PlatformMetricNotificationBuilder.build(
+            context = context,
+            config = config,
+            card = card,
+            category = categoryFor(card),
+            requestPromotedOngoing = requestPromotedOngoing,
+            samsungExtras = samsungExtras
+        )?.let { return it }
+
         val builder = NotificationCompat.Builder(context, config.channelId)
             .setSmallIcon(card.icon)
-            .setContentTitle(card.toPrimaryInfo())
+            .setContentTitle(LiveUpdateTextStyler.styleTitle(card.toPrimaryInfo(), card.toSemanticStyle()))
             .setContentText(card.toSecondaryInfo())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(categoryFor(card))
 
         card.tapAction?.let(builder::setContentIntent)
+        card.toDeleteIntent()?.let(builder::setDeleteIntent)
+        safeLargeIcon(card)?.let(builder::setLargeIcon)
+        card.toSubText()
+            ?.takeIf { it.isNotBlank() }
+            ?.let(builder::setSubText)
+        StatusChipAdapter.apply(builder, card)
         card.accentColor?.let(builder::setColor)
 
         card.toProgress()?.let { progress ->
             builder.setProgress(card.toProgressMax(), progress, false)
         }
+        if (card.isProgressIndeterminate()) {
+            builder.setProgress(card.toProgressMax(), 0, true)
+        }
+
+        BigTextStyleAdapter.apply(builder, card)
 
         applyCardDetails(builder, card)
 
@@ -71,9 +100,7 @@ class NowBarNotificationBuilder(
             requestPromotedOngoing = requestPromotedOngoing
         )
 
-        if (FeatureDetector.isSamsungNowBarSupported(context)) {
-            builder.addExtras(buildSamsungExtras(card, samsungStyle))
-        }
+        samsungExtras?.let(builder::addExtras)
 
         // Set substName and showSmallIcon directly on notification extras
         // (Samsung Clock sets these on the builder extras separately from the ongoing bundle)
@@ -118,6 +145,8 @@ class NowBarNotificationBuilder(
 
             samsungProgressColor(card)?.let(::setProgressColor)
 
+            samsungProgressIcon(card)?.let(::setProgressSegmentIcon)
+
             samsungSegments(card)
                 .takeIf { it.isNotEmpty() }
                 ?.let(::setProgressSegments)
@@ -131,7 +160,12 @@ class NowBarNotificationBuilder(
             safeFirstIcon(card)?.let(::setFirstIcon)
             safeSecondaryInfoIcon(card)?.let(::setSecondaryInfoIcon)
             card.toActionBgColor()?.let(::setActionBgColor)
-            setActionPrimarySet(config.actionPrimarySet)
+            config.actionPrimarySet?.let(::setActionPrimarySet)
+            if (card.hasChronometerSupport()) {
+                config.chronometerConfig?.let(::setChronometerConfig)
+            }
+            config.capsuleConfig?.let(::setCapsuleConfig)
+            config.aodRemoteApp?.let(::setAodRemoteApp)
 
             card.toSubstName()?.takeIf { it.isNotBlank() }?.let(::setSubstName)
             card.toNowBarSubScreenIntent()?.let(::setNowBarSubScreenIntent)
@@ -154,6 +188,12 @@ class NowBarNotificationBuilder(
         }
     }
 
+    private fun safeLargeIcon(card: NowBarCard): Icon? {
+        return card.toLargeIcon()?.let { icon ->
+            runCatching { icon.toIcon(context) }.getOrNull()
+        }
+    }
+
     private fun safeFirstIcon(card: NowBarCard): Icon? {
         return card.toFirstIcon()?.let { icon ->
             runCatching { icon.toIcon(context) }.getOrNull()
@@ -171,20 +211,55 @@ class NowBarNotificationBuilder(
         else -> card.accentColor
     }
 
+    private fun samsungProgressIcon(card: NowBarCard): Icon? = when (card) {
+        is WorkoutCard -> safeIcon(card)
+        is NavigationCard -> card.turnIcon?.let { icon ->
+            runCatching { icon.toIcon(context) }.getOrNull()
+        }
+        is DeliveryCard -> (card.trackerIcon ?: card.icon).let { icon ->
+            runCatching { icon.toIcon(context) }.getOrNull()
+        }
+        is CustomCard -> card.progressTrackerIcon?.let { icon ->
+            runCatching { icon.toIcon(context) }.getOrNull()
+        }
+        else -> null
+    }
+
     /**
      * Keep Samsung Health-like segmented workout bars by default.
      * Real custom segment APIs are still preserved in OngoingExtrasBuilder for power users.
      */
     private fun samsungSegments(card: NowBarCard): List<ProgressSegment> {
-        val color = samsungProgressColor(card) ?: return emptyList()
-
         return when (card) {
-            is WorkoutCard -> listOf(
-                ProgressSegment(startPosition = 0.0f, color = color),
-                ProgressSegment(startPosition = 0.34f, color = color),
-                ProgressSegment(startPosition = 0.67f, color = color)
-            )
+            is CustomCard -> customSamsungSegments(card)
+            is DeliveryCard -> styleSegmentsToSamsungSegments(ProgressStyleAdapter.adapt(card).segments)
+            is WorkoutCard -> {
+                val color = samsungProgressColor(card) ?: return emptyList()
+                listOf(
+                    ProgressSegment(startPosition = 0.0f, color = color),
+                    ProgressSegment(startPosition = 0.34f, color = color),
+                    ProgressSegment(startPosition = 0.67f, color = color)
+                )
+            }
             else -> emptyList()
+        }
+    }
+
+    private fun customSamsungSegments(card: CustomCard): List<ProgressSegment> {
+        return styleSegmentsToSamsungSegments(card.progressSegments)
+    }
+
+    private fun styleSegmentsToSamsungSegments(segments: List<StyleSegment>): List<ProgressSegment> {
+        if (segments.isEmpty()) return emptyList()
+
+        val totalLength = segments.sumOf { it.length }
+        if (totalLength <= 0) return emptyList()
+
+        var start = 0
+        return segments.map { segment ->
+            val startPosition = (start.toFloat() / totalLength).coerceIn(0f, 1f)
+            start += segment.length
+            ProgressSegment(startPosition = startPosition, color = segment.color)
         }
     }
 
@@ -192,6 +267,10 @@ class NowBarNotificationBuilder(
         builder: NotificationCompat.Builder,
         card: NowBarCard
     ) {
+        card.toActions().take(NowBarActionLimits.MAX_ACTIONS).forEach { action ->
+            builder.addAction(action.toCompatAction())
+        }
+
         when (card) {
             is MediaCard -> {
                 card.albumArt?.let(builder::setLargeIcon)
@@ -210,11 +289,20 @@ class NowBarNotificationBuilder(
             }
 
             is CallCard -> {
-                if (card.isIncoming) {
-                    card.answerAction?.let { builder.addAction(0, "Answer", it) }
-                    card.declineAction?.let { builder.addAction(0, "Decline", it) }
-                } else {
-                    card.hangupAction?.let { builder.addAction(0, "Hang up", it) }
+                if (CallStyleAdapter.apply(context, builder, card)) return
+
+                when (card.callType) {
+                    CallCardType.SCREENING -> {
+                        card.hangupAction?.let { builder.addAction(0, "Hang up", it) }
+                        card.answerAction?.let { builder.addAction(0, "Answer", it) }
+                    }
+                    CallCardType.INCOMING -> {
+                        card.answerAction?.let { builder.addAction(0, "Answer", it) }
+                        card.declineAction?.let { builder.addAction(0, "Decline", it) }
+                    }
+                    CallCardType.ONGOING -> {
+                        card.hangupAction?.let { builder.addAction(0, "Hang up", it) }
+                    }
                 }
             }
 
@@ -227,6 +315,8 @@ class NowBarNotificationBuilder(
         is WorkoutCard -> NotificationCompat.CATEGORY_WORKOUT
         is MediaCard -> NotificationCompat.CATEGORY_TRANSPORT
         is NavigationCard -> NotificationCompat.CATEGORY_NAVIGATION
+        is DeliveryCard -> NotificationCompat.CATEGORY_PROGRESS
+        is MetricCard -> NotificationCompat.CATEGORY_PROGRESS
         is CallCard -> NotificationCompat.CATEGORY_CALL
         else -> NotificationCompat.CATEGORY_PROGRESS
     }

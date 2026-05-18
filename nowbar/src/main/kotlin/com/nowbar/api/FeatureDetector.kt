@@ -2,6 +2,7 @@ package com.nowbar.api
 
 import android.content.Context
 import android.os.Build
+import androidx.annotation.ChecksSdkIntAtLeast
 
 /**
  * Runtime feature detection.
@@ -28,6 +29,19 @@ object FeatureDetector {
         context.packageManager.hasSystemFeature(FEATURE_SAMSUNG_NOWBAR)
 
     @JvmStatic
+    fun isSamsungDevice(): Boolean =
+        Build.MANUFACTURER.equals("samsung", ignoreCase = true) ||
+            Build.BRAND.equals("samsung", ignoreCase = true)
+
+    /**
+     * Samsung extras are harmless on unsupported builds and useful on One UI builds
+     * that do not expose a stable public Now Bar feature flag.
+     */
+    @JvmStatic
+    fun canApplySamsungNowBarExtras(context: Context): Boolean =
+        isSamsungNowBarSupported(context) || isSamsungDevice()
+
+    @JvmStatic
     fun isGoogleAmbientSupported(context: Context): Boolean =
         context.packageManager.hasSystemFeature(FEATURE_GOOGLE_AMBIENT)
 
@@ -36,6 +50,7 @@ object FeatureDetector {
         context.packageManager.hasSystemFeature(FEATURE_OPPO_AMBIENT)
 
     @JvmStatic
+    @ChecksSdkIntAtLeast(api = 36)
     fun isAndroid16LiveUpdatesSupported(): Boolean =
         Build.VERSION.SDK_INT >= ANDROID_16_SDK
 
@@ -45,7 +60,7 @@ object FeatureDetector {
      */
     @JvmStatic
     fun isNativeSurfaceSupported(context: Context): Boolean =
-        isSamsungNowBarSupported(context) || isAndroid16LiveUpdatesSupported()
+        canApplySamsungNowBarExtras(context) || isAndroid16LiveUpdatesSupported()
 
     @JvmStatic
     fun isAnyNowBarSupported(context: Context): Boolean = isNativeSurfaceSupported(context)
@@ -53,7 +68,7 @@ object FeatureDetector {
     @JvmStatic
     fun getSupportedPlatform(context: Context): NowBarPlatform {
         return when {
-            isSamsungNowBarSupported(context) -> NowBarPlatform.SAMSUNG
+            canApplySamsungNowBarExtras(context) -> NowBarPlatform.SAMSUNG
             isAndroid16LiveUpdatesSupported() -> NowBarPlatform.ANDROID_16
             isGoogleAmbientSupported(context) -> NowBarPlatform.GOOGLE
             isOppoAmbientSupported(context) -> NowBarPlatform.OPPO

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NowBar SDK Demo</string>
+    <string name="now_bar_settings">Now Bar settings</string>
+    <string name="live_update_settings">Live Update settings</string>
+</resources>

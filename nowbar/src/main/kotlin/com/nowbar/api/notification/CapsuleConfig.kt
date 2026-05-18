@@ -30,4 +30,14 @@ data class CapsuleConfig(
     @ColorInt val bgStartColor: Int,
     @ColorInt val bgEndColor: Int,
     val priority: String? = null
-)
+) {
+    init {
+        require(
+            priority == null ||
+                priority == NowBarExtrasKeys.CapsulePriority.NORMAL ||
+                priority == NowBarExtrasKeys.CapsulePriority.LOW
+        ) {
+            "Capsule priority must be \"normal\", \"low\", or null"
+        }
+    }
+}

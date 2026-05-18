@@ -18,15 +18,15 @@ object NowBarColors {
 
     /** Now Bar progress indicator - light theme. Resource: tracker_sport_now_bar_progress */
     @ColorInt
-    const val PROGRESS_LIGHT: Int = 0xFF0FCF6E.toInt()
+    const val PROGRESS_LIGHT: Int = -15741074 // 0xFF0FCF6E
 
     /** Now Bar progress indicator - dark/night theme. Resource: tracker_sport_now_bar_progress */
     @ColorInt
-    const val PROGRESS_DARK: Int = 0xFF39D489.toInt()
+    const val PROGRESS_DARK: Int = -12987255 // 0xFF39D489
 
     /** Now Bar progress track (background) - light theme. Resource: tracker_sport_now_bar_progress_track */
     @ColorInt
-    const val PROGRESS_TRACK_LIGHT: Int = 0xFFE1E1E1.toInt()
+    const val PROGRESS_TRACK_LIGHT: Int = -1973791 // 0xFFE1E1E1
 
     /** Now Bar progress track (background) - dark/night theme. Resource: tracker_sport_now_bar_progress_track */
     @ColorInt

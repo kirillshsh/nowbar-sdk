@@ -32,10 +32,14 @@ data class SamsungNowBarGroupSummarySpec(
 )
 
 object SamsungNowBarGroupSummaryBuilder {
+    const val GOOGLE_FINANCE_CHANNEL_ID = "google_finance_nowbar_ongoing_channel"
     const val GOOGLE_FINANCE_GROUP_KEY = "google_finance_nowbar_group_key"
     const val GOOGLE_FINANCE_SUMMARY_ID = 3000
+    const val GOOGLE_FINANCE_CHILD_ID = 3115
+    const val GOOGLE_SPORTS_CHANNEL_ID = "google_sports_nowbar_ongoing_channel"
     const val GOOGLE_SPORTS_GROUP_KEY = "google_sports_nowbar_group_key"
     const val GOOGLE_SPORTS_SUMMARY_ID = 1000
+    const val GOOGLE_SPORTS_CHILD_ID = 1123
 
     @JvmStatic
     fun build(

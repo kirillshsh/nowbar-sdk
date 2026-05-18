@@ -38,7 +38,7 @@
 | Fallback | Standard ongoing notification via `FallbackStrategy` |
 | Integration style | Copy the [`nowbar/`](./nowbar) module into your project |
 | Entry points | Direct manager API, session API, foreground service helper |
-| Samsung extras | Chronometer, capsule, app icon loading, action buttons, sub-screen intents |
+| Samsung extras | Chronometer, capsule, app icon loading, AOD remote-app identity, action buttons, sub-screen intents |
 
 ### Architecture
 
@@ -67,11 +67,13 @@ graph TD
 
 | Card | Use Case | Samsung extras | Live Updates |
 | --- | --- | :---: | :---: |
-| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Countdown / stopwatch | ✅ | ✅ |
+| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Countdown / stopwatch with status-chip chronometer | ✅ | ✅ |
 | [`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt) | Fitness tracking | ✅ | ✅ |
 | [`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt) | Music / podcast playback | ✅ | ✅ |
-| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Incoming / active calls | ✅ | ✅ |
+| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Incoming / active / screened calls | ✅ | ✅ |
 | [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Turn-by-turn navigation | ✅ | ✅ |
+| [`DeliveryCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/DeliveryCard.kt) | Food / package delivery journey with Samsung progress segments | ✅ | ✅ |
+| [`MetricCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MetricCard.kt) | Android 17 MetricStyle metrics | Standard | ✅ |
 | [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Any custom scenario | ✅ | ✅ |
 
 <details>
@@ -86,7 +88,10 @@ Extras keys extracted from decompiled Samsung apps (Health, Clock, Voice Recorde
 | Icons | `nowbarIcon`, `secondIcon`, `firstIcon`, `secondaryInfoIcon` | Icon | Health, Voice Recorder |
 | Style | `style` (0 = notification only, 1 = both, 2 = Now Bar only) | Int | Health, Voice Recorder |
 | Action | `actionType` (0 = icon, 1 = text), `actionBgColor`, `actionPrimarySet` | Int | Voice Recorder |
-| Progress | `progress`, `progressMax`, `progressSegments`, `progressColor` | Int / Bundle[] | Health |
+| Progress | `progress`, `progressMax`, `progressSegments`, `progressSegments.progressColor` | Int / Bundle[] | Health |
+| Progress segments | `progressSegments.segmentColor`, `progressSegments.segmentStart` | Int / Float | Health |
+| Progress Icon | `progressSegments.icon` | Icon | Health |
+| AOD Remote App | `aodRemoteAppName`, `aodRemoteAppIcon`, `aodRemoteAppPendingIntent` | CharSequence / Icon / PendingIntent | Google Sports / Finance dumps |
 | Chronometer | `chronometerRemoteView`, `chronometerRemoteViewTag`, `chronometerRemoteViewPosition` | RemoteViews / String / Int | Voice Recorder |
 | Sub-screen | `nowbarPendingIntentOnSubScreen` | PendingIntent | Voice Recorder |
 | Capsule | `isCapsule`, `capsule_layout`, `capsule_action`, `bg_startColor`, `bg_endColor`, `capsule_priority` | Various | Voice Recorder |
@@ -99,18 +104,30 @@ Extras keys extracted from decompiled Samsung apps (Health, Clock, Voice Recorde
 | API | Purpose |
 | --- | --- |
 | [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt) | Feature detection, channel creation, build/post/cancel |
-| [`NowBarConfig`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarConfig.kt) | Notification channel, notification id, fallback, Samsung surface options |
-| [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
+| [`NowBarDiagnostics`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarDiagnostics.kt) | Device capability report for Samsung extras, hidden style, Live Updates, and Now Bar / notification settings shortcuts |
+| [`NowBarReadiness`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarReadiness.kt) | One-shot card/config preflight that combines device capability, Live Updates eligibility, notification evidence, fallback state, action truncation, and UX advisories |
+| [`NowBarConfig`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarConfig.kt) | Notification channel, notification id, fallback, Samsung surface options, and optional AOD remote-app identity |
+| [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `unpin()` / `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Helper base class for long-running foreground-service flows |
-| [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Base model for card content |
+| [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Base model for card content and optional Live Update subtext |
 | [`ChronometerConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ChronometerConfig.kt) | Live chronometer (RemoteViews) for Now Bar |
 | [`CapsuleConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/CapsuleConfig.kt) | Capsule widget for Samsung foldable covers |
 | [`AppIconHelper`](./nowbar/src/main/kotlin/com/nowbar/api/util/AppIconHelper.kt) | Load any app's icon by package name for Now Bar |
 | [`NowBarExtrasKeys`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarExtrasKeys.kt) | All discovered Samsung Now Bar extras keys |
+| [`SamsungOngoingActivityStyleBuilder`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungOngoingActivityStyleBuilder.kt) | Optional hidden Samsung `Notification.OngoingActivityStyle` reflection path with applied/missing/failed method report |
+| [`SamsungOngoingActivityDumpExtras`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungOngoingActivityDumpExtras.kt) | Dump-parity extras observed in Samsung AOD Google Sports / Finance cards |
+| [`SamsungNowBarGroupSummaryBuilder`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungNowBarGroupSummaryBuilder.kt) | Summary + child notification topology observed in Samsung AOD Now Bar dumps |
+| [`LiveUpdateDiagnostics`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateDiagnostics.kt) | Android 16 promotion eligibility, Android ProgressStyle payload, action button evidence, subtext/status chip report with compact-chip/delete-intent/action-limit advisories, manifest permission report, and safe manage-promoted-notifications settings intent |
+| [`NowBarNotificationEvidence`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarNotificationEvidence.kt) | Built notification inspector for Samsung extras, structured first-class Now Bar text/visual/action/progress/chronometer/capsule state, dump extras, native style, promoted ongoing, Android action buttons, ProgressStyle payload, subtext/status chips, AOD remote-app identity, structured Samsung views/text/visual/chronometer state, call/progress/metric templates, and capsule hints |
+| [`ActionConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Action buttons with semantic types, stable ids, `textOnly(...)`, `disabled(...)`, `NO_ICON`, and `UNPIN` support |
+| [`NowBarActionExtras`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Stores action id/semantic metadata in `Notification.Action.extras` for diagnostics and real-device evidence |
+| [`NowBarActionLimits`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Android Live Updates / MetricStyle action button limit |
+| [`LiveUpdateSemanticStyle`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateSemanticStyle.kt) | Android 17+ semantic title annotations for Live Updates |
+| [`LiveUpdateMetricStyle`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateMetric.kt) | Android 17 MetricStyle values for timers, workouts, travel, compact status metrics, and MetricStyle subtext header context |
 
 ### Samsung Now Bar Extras
 
-The SDK supports all Samsung Now Bar extras discovered from decompiling Samsung Clock and Samsung Health:
+The SDK supports Samsung Now Bar extras and hidden style methods discovered from decompiling Samsung Health and Voice Recorder:
 
 | Extra | Purpose |
 | --- | --- |
@@ -118,7 +135,17 @@ The SDK supports all Samsung Now Bar extras discovered from decompiling Samsung 
 | Capsule | Foldable cover widget via `CapsuleConfig` with gradient background |
 | Action Primary Set | Controls which button set appears in collapsed Now Bar |
 | Sub-Screen Intent | PendingIntent fired on Now Bar sub-screen tap |
+| AOD Remote App | `NowBarConfig.aodRemoteApp` or `OngoingExtrasBuilder.setAodRemoteApp(...)` writes Samsung AOD app name, icon, and tap intent |
 | Subst Name | Substitution name displayed in the notification |
+| Delete Intent | PendingIntent fired when the user dismisses the ongoing update |
+| Unpin Action | `ActionSemantic.UNPIN` for demoting a user-monitored live surface to a standard ongoing notification |
+| Large Icon | Rich visual identity for delivery, media, call, and custom Live Updates |
+| Status Chip Time | Absolute `when`/chronometer countdown/count-up for timer, delivery, custom, and metric chips |
+| Short Critical Text | Explicit `setShortCriticalText` source for Android Live Update and fallback status chips |
+| BigTextStyle | `CustomCard.bigText(...)` for long Live Update status details without custom RemoteViews |
+| Custom ProgressStyle | `CustomCard` can provide segments, points, tracker/start/end icons, `styledByProgress`, and mirrored Samsung progress segments |
+| Dump Progress | `SamsungOngoingActivityProgress` mirrors Samsung progress payload inside dump-style Google Sports / Finance topology |
+| Evidence State | `NowBarNotificationEvidence.inspect(...).samsungNowBar` exposes structured text, visual, action, progress, chronometer, capsule, and remote-app extras before posting |
 | App Icon Loading | Load any app's icon for chip/nowbar display via `AppIconHelper` |
 
 <details>
@@ -149,6 +176,17 @@ val card = CustomCard.Builder("Download", appIcon, "Downloading...")
 | Unsupported devices | Plain ongoing notification for `AUTO` / `STANDARD_NOTIFICATION`, no SDK-managed posting for `NONE` |
 
 Use `NowBarManager.isSupported(context)` to check whether a native enhanced surface is available, and `NowBarManager.getSupportedPlatform(context)` to inspect the detected platform.
+Samsung extras are applied when the public Now Bar feature flag is present or the device reports Samsung manufacturer/brand, because some One UI builds do not expose a stable public feature flag.
+For setup flows, `NowBarDiagnostics.resolveNowBarSettingsIntent(context)` opens the documented Samsung Now Bar settings area when available, and `resolveRecommendedSettingsIntent(context)` falls back through promoted-notification, app-notification, and app-details settings.
+
+Preflight a card before posting:
+
+```kotlin
+val report = NowBarManager.inspectReadiness(context, config, card)
+if (!report.readyForEnhancedSurface) {
+    Log.w("NowBar", "Not ready: ${report.blockingReasons}")
+}
+```
 
 ### Requirements
 
@@ -298,6 +336,9 @@ nowbar-sdk/
 │   ├── TimerNowBarService.kt
 │   ├── WorkoutNowBarService.kt
 │   ├── NavigationNowBarService.kt
+│   ├── DeliveryNowBarService.kt
+│   ├── MetricNowBarService.kt
+│   ├── CustomProgressNowBarService.kt
 │   ├── ChronometerExample.kt
 │   ├── CapsuleExample.kt
 │   └── AndroidManifest.snippet.xml
@@ -337,7 +378,7 @@ nowbar-sdk/
 | Фолбек | Звичайне ongoing-сповіщення через `FallbackStrategy` |
 | Формат інтеграції | Папка [`nowbar/`](./nowbar) копіюється прямо у ваш проєкт |
 | Точки входу | Прямий manager API, session API та helper для foreground service |
-| Samsung extras | Хронометр, капсула, завантаження іконок, кнопки дій, sub-screen intents |
+| Samsung extras | Хронометр, капсула, завантаження іконок, AOD remote-app identity, кнопки дій, sub-screen intents |
 
 ### Архітектура
 
@@ -366,11 +407,13 @@ graph TD
 
 | Картка | Сценарій | Samsung extras | Live Updates |
 | --- | --- | :---: | :---: |
-| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундомір | ✅ | ✅ |
+| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундомір зі status-chip chronometer | ✅ | ✅ |
 | [`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt) | Фітнес-трекінг | ✅ | ✅ |
 | [`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt) | Музика / подкасти | ✅ | ✅ |
-| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Вхідний / активний дзвінок | ✅ | ✅ |
+| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Вхідний / активний / screening дзвінок | ✅ | ✅ |
 | [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Покрокова навігація | ✅ | ✅ |
+| [`DeliveryCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/DeliveryCard.kt) | Доставка їжі / посилок із Samsung progress segments | ✅ | ✅ |
+| [`MetricCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MetricCard.kt) | Android 17 MetricStyle metrics | Standard | ✅ |
 | [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Будь-який власний сценарій | ✅ | ✅ |
 
 <details>
@@ -385,7 +428,10 @@ graph TD
 | Іконки | `nowbarIcon`, `secondIcon`, `firstIcon`, `secondaryInfoIcon` | Icon | Health, Voice Recorder |
 | Стиль | `style` (0 = тільки notification, 1 = обидва, 2 = тільки Now Bar) | Int | Health, Voice Recorder |
 | Дія | `actionType` (0 = іконка, 1 = текст), `actionBgColor`, `actionPrimarySet` | Int | Voice Recorder |
-| Прогрес | `progress`, `progressMax`, `progressSegments`, `progressColor` | Int / Bundle[] | Health |
+| Прогрес | `progress`, `progressMax`, `progressSegments`, `progressSegments.progressColor` | Int / Bundle[] | Health |
+| Сегменти прогресу | `progressSegments.segmentColor`, `progressSegments.segmentStart` | Int / Float | Health |
+| Progress Icon | `progressSegments.icon` | Icon | Health |
+| AOD Remote App | `aodRemoteAppName`, `aodRemoteAppIcon`, `aodRemoteAppPendingIntent` | CharSequence / Icon / PendingIntent | Google Sports / Finance dumps |
 | Хронометр | `chronometerRemoteView`, `chronometerRemoteViewTag`, `chronometerRemoteViewPosition` | RemoteViews / String / Int | Voice Recorder |
 | Саб-екран | `nowbarPendingIntentOnSubScreen` | PendingIntent | Voice Recorder |
 | Капсула | `isCapsule`, `capsule_layout`, `capsule_action`, `bg_startColor`, `bg_endColor`, `capsule_priority` | Various | Voice Recorder |
@@ -398,18 +444,30 @@ graph TD
 | API | Для чого потрібне |
 | --- | --- |
 | [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt) | Визначення підтримки, створення channel, build/post/cancel сповіщень |
-| [`NowBarConfig`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarConfig.kt) | Channel, notification id, fallback та параметри Samsung surface |
-| [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
+| [`NowBarDiagnostics`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarDiagnostics.kt) | Звіт device capability для Samsung extras, hidden style, Live Updates і Now Bar / notification settings shortcuts |
+| [`NowBarReadiness`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarReadiness.kt) | One-shot preflight картки/config з device capability, Live Updates eligibility, notification evidence, fallback state, action truncation і UX advisories |
+| [`NowBarConfig`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarConfig.kt) | Channel, notification id, fallback, параметри Samsung surface і optional AOD remote-app identity |
+| [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `unpin()` / `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базовий helper для довгоживучих foreground service сценаріїв |
-| [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базова модель картки |
+| [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базова модель картки та optional Live Update subtext |
 | [`ChronometerConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ChronometerConfig.kt) | Живий хронометр (RemoteViews) для Now Bar |
 | [`CapsuleConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/CapsuleConfig.kt) | Капсула для обкладинки складних Samsung |
 | [`AppIconHelper`](./nowbar/src/main/kotlin/com/nowbar/api/util/AppIconHelper.kt) | Завантаження іконки будь-якого додатку за package name |
 | [`NowBarExtrasKeys`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarExtrasKeys.kt) | Усі знайдені Samsung Now Bar extras ключі |
+| [`SamsungOngoingActivityStyleBuilder`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungOngoingActivityStyleBuilder.kt) | Опціональний hidden Samsung `Notification.OngoingActivityStyle` reflection path зі звітом applied/missing/failed methods |
+| [`SamsungOngoingActivityDumpExtras`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungOngoingActivityDumpExtras.kt) | Dump-parity extras, знайдені в Samsung AOD Google Sports / Finance картках |
+| [`SamsungNowBarGroupSummaryBuilder`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungNowBarGroupSummaryBuilder.kt) | Summary + child notification топологія з Samsung AOD Now Bar dumps |
+| [`LiveUpdateDiagnostics`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateDiagnostics.kt) | Звіт eligibility для Android 16 promotion, Android ProgressStyle payload, action button evidence, subtext/status chip з compact-chip/delete-intent/action-limit advisories, manifest permission та safe manage-promoted-notifications intent до налаштувань |
+| [`NowBarNotificationEvidence`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarNotificationEvidence.kt) | Інспектор готового notification для Samsung extras, structured first-class Now Bar text/visual/action/progress/chronometer/capsule state, dump extras, native style, promoted ongoing, Android action buttons, ProgressStyle payload, subtext/status chips, AOD remote-app identity, structured Samsung views/text/visual/chronometer state, call/progress/metric templates і capsule hints |
+| [`ActionConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Action buttons із semantic types, stable ids, `textOnly(...)`, `disabled(...)`, `NO_ICON` та `UNPIN` |
+| [`NowBarActionExtras`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Зберігає action id/semantic metadata у `Notification.Action.extras` для diagnostics і real-device evidence |
+| [`NowBarActionLimits`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Ліміт action buttons для Android Live Updates / MetricStyle |
+| [`LiveUpdateSemanticStyle`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateSemanticStyle.kt) | Android 17+ semantic title annotations для Live Updates |
+| [`LiveUpdateMetricStyle`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateMetric.kt) | Android 17 MetricStyle values для timers, workouts, travel, compact status metrics і MetricStyle subtext header context |
 
 ### Samsung Now Bar Extras
 
-SDK підтримує всі Samsung Now Bar extras, знайдені при декомпіляції Samsung Clock та Samsung Health:
+SDK підтримує Samsung Now Bar extras і hidden style methods, знайдені при декомпіляції Samsung Health та Voice Recorder:
 
 | Extra | Призначення |
 | --- | --- |
@@ -417,7 +475,17 @@ SDK підтримує всі Samsung Now Bar extras, знайдені при д
 | Capsule | Віджет для обкладинки складного пристрою через `CapsuleConfig` з градієнтним фоном |
 | Action Primary Set | Визначає, який набір кнопок показувати у згорнутому Now Bar |
 | Sub-Screen Intent | PendingIntent, що спрацьовує при натисканні на Now Bar sub-screen |
+| AOD Remote App | `NowBarConfig.aodRemoteApp` або `OngoingExtrasBuilder.setAodRemoteApp(...)` записує Samsung AOD app name, icon і tap intent |
 | Subst Name | Замінне ім'я, що відображається у сповіщенні |
+| Delete Intent | PendingIntent, що спрацьовує при dismiss ongoing update |
+| Unpin Action | `ActionSemantic.UNPIN` для demotion live surface, яку користувач моніторить, до звичайного ongoing-сповіщення |
+| Large Icon | Розширена візуальна ідентичність для delivery, media, call і custom Live Updates |
+| Status Chip Time | Absolute `when`/chronometer countdown/count-up для timer, delivery, custom і metric chips |
+| Short Critical Text | Явне джерело `setShortCriticalText` для Android Live Update та fallback status chips |
+| BigTextStyle | `CustomCard.bigText(...)` для довгих Live Update деталей без custom RemoteViews |
+| Custom ProgressStyle | `CustomCard` може задавати segments, points, tracker/start/end icons, `styledByProgress` і mirrored Samsung progress segments |
+| Dump Progress | `SamsungOngoingActivityProgress` дзеркалить Samsung progress payload у dump-style Google Sports / Finance topology |
+| Evidence State | `NowBarNotificationEvidence.inspect(...).samsungNowBar` показує structured text, visual, action, progress, chronometer, capsule і remote-app extras перед posting |
 | App Icon Loading | Завантаження іконки будь-якого додатку для chip/nowbar через `AppIconHelper` |
 
 <details>
@@ -448,6 +516,8 @@ val card = CustomCard.Builder("Download", appIcon, "Downloading...")
 | Інші пристрої | Звичайне ongoing-сповіщення для `AUTO` / `STANDARD_NOTIFICATION`, без SDK-posting для `NONE` |
 
 Перевірити наявність нативної поверхні можна через `NowBarManager.isSupported(context)`, а подивитися визначену платформу — через `NowBarManager.getSupportedPlatform(context)`.
+Samsung extras застосовуються, коли є public Now Bar feature flag або пристрій повідомляє Samsung manufacturer/brand, бо деякі One UI builds не мають стабільного public feature flag.
+Для setup flows `NowBarDiagnostics.resolveNowBarSettingsIntent(context)` відкриває documented Samsung Now Bar settings area, коли вона доступна, а `resolveRecommendedSettingsIntent(context)` fallback'иться через promoted-notification, app-notification і app-details settings.
 
 ### Вимоги
 
@@ -600,7 +670,7 @@ val card = WorkoutCard(
 | Фоллбек | Обычное ongoing-уведомление через `FallbackStrategy` |
 | Формат интеграции | Папка [`nowbar/`](./nowbar) копируется прямо в ваш проект |
 | Точки входа | Прямой manager API, session API и helper для foreground service |
-| Samsung extras | Хронометр, капсула, загрузка иконок, кнопки действий, sub-screen intents |
+| Samsung extras | Хронометр, капсула, загрузка иконок, AOD remote-app identity, кнопки действий, sub-screen intents |
 
 ### Архитектура
 
@@ -629,11 +699,13 @@ graph TD
 
 | Карточка | Сценарий | Samsung extras | Live Updates |
 | --- | --- | :---: | :---: |
-| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундомер | ✅ | ✅ |
+| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундомер со status-chip chronometer | ✅ | ✅ |
 | [`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt) | Фитнес-трекинг | ✅ | ✅ |
 | [`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt) | Музыка / подкасты | ✅ | ✅ |
-| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Входящий / активный звонок | ✅ | ✅ |
+| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Входящий / активный / screening звонок | ✅ | ✅ |
 | [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Пошаговая навигация | ✅ | ✅ |
+| [`DeliveryCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/DeliveryCard.kt) | Доставка еды / посылок с Samsung progress segments | ✅ | ✅ |
+| [`MetricCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MetricCard.kt) | Android 17 MetricStyle metrics | Standard | ✅ |
 | [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Любой пользовательский сценарий | ✅ | ✅ |
 
 <details>
@@ -648,7 +720,10 @@ graph TD
 | Иконки | `nowbarIcon`, `secondIcon`, `firstIcon`, `secondaryInfoIcon` | Icon | Health, Voice Recorder |
 | Стиль | `style` (0 = только notification, 1 = оба, 2 = только Now Bar) | Int | Health, Voice Recorder |
 | Действие | `actionType` (0 = иконка, 1 = текст), `actionBgColor`, `actionPrimarySet` | Int | Voice Recorder |
-| Прогресс | `progress`, `progressMax`, `progressSegments`, `progressColor` | Int / Bundle[] | Health |
+| Прогресс | `progress`, `progressMax`, `progressSegments`, `progressSegments.progressColor` | Int / Bundle[] | Health |
+| Сегменты прогресса | `progressSegments.segmentColor`, `progressSegments.segmentStart` | Int / Float | Health |
+| Progress Icon | `progressSegments.icon` | Icon | Health |
+| AOD Remote App | `aodRemoteAppName`, `aodRemoteAppIcon`, `aodRemoteAppPendingIntent` | CharSequence / Icon / PendingIntent | Google Sports / Finance dumps |
 | Хронометр | `chronometerRemoteView`, `chronometerRemoteViewTag`, `chronometerRemoteViewPosition` | RemoteViews / String / Int | Voice Recorder |
 | Саб-экран | `nowbarPendingIntentOnSubScreen` | PendingIntent | Voice Recorder |
 | Капсула | `isCapsule`, `capsule_layout`, `capsule_action`, `bg_startColor`, `bg_endColor`, `capsule_priority` | Various | Voice Recorder |
@@ -661,18 +736,30 @@ graph TD
 | API | Для чего нужно |
 | --- | --- |
 | [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt) | Определение поддержки, создание channel, build/post/cancel уведомлений |
-| [`NowBarConfig`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarConfig.kt) | Channel, notification id, fallback и параметры Samsung surface |
-| [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
+| [`NowBarDiagnostics`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarDiagnostics.kt) | Device capability report для Samsung extras, hidden style, Live Updates и Now Bar / notification settings shortcuts |
+| [`NowBarReadiness`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarReadiness.kt) | One-shot preflight карточки/config с device capability, Live Updates eligibility, notification evidence, fallback state, action truncation и UX advisories |
+| [`NowBarConfig`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarConfig.kt) | Channel, notification id, fallback, параметры Samsung surface и optional AOD remote-app identity |
+| [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `unpin()` / `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базовый helper для долгоживущих foreground service сценариев |
-| [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базовая модель карточки |
+| [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базовая модель карточки и optional Live Update subtext |
 | [`ChronometerConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ChronometerConfig.kt) | Живой хронометр (RemoteViews) для Now Bar |
 | [`CapsuleConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/CapsuleConfig.kt) | Капсула для обложки складных Samsung |
 | [`AppIconHelper`](./nowbar/src/main/kotlin/com/nowbar/api/util/AppIconHelper.kt) | Загрузка иконки любого приложения по package name |
 | [`NowBarExtrasKeys`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarExtrasKeys.kt) | Все найденные Samsung Now Bar extras ключи |
+| [`SamsungOngoingActivityStyleBuilder`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungOngoingActivityStyleBuilder.kt) | Опциональный hidden Samsung `Notification.OngoingActivityStyle` reflection path с отчётом applied/missing/failed methods |
+| [`SamsungOngoingActivityDumpExtras`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungOngoingActivityDumpExtras.kt) | Dump-parity extras из Samsung AOD Google Sports / Finance карточек |
+| [`SamsungNowBarGroupSummaryBuilder`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungNowBarGroupSummaryBuilder.kt) | Summary + child notification топология из Samsung AOD Now Bar dumps |
+| [`LiveUpdateDiagnostics`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateDiagnostics.kt) | Отчёт eligibility для Android 16 promotion, Android ProgressStyle payload, action button evidence, subtext/status chip с compact-chip/delete-intent/action-limit advisories, manifest permission и safe manage-promoted-notifications intent в настройки |
+| [`NowBarNotificationEvidence`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarNotificationEvidence.kt) | Инспектор готового notification для Samsung extras, structured first-class Now Bar text/visual/action/progress/chronometer/capsule state, dump extras, native style, promoted ongoing, Android action buttons, ProgressStyle payload, subtext/status chips, AOD remote-app identity, structured Samsung views/text/visual/chronometer state, call/progress/metric templates и capsule hints |
+| [`ActionConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Action buttons с semantic types, stable ids, `textOnly(...)`, `disabled(...)`, `NO_ICON` и `UNPIN` |
+| [`NowBarActionExtras`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Сохраняет action id/semantic metadata в `Notification.Action.extras` для diagnostics и real-device evidence |
+| [`NowBarActionLimits`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Лимит action buttons для Android Live Updates / MetricStyle |
+| [`LiveUpdateSemanticStyle`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateSemanticStyle.kt) | Android 17+ semantic title annotations для Live Updates |
+| [`LiveUpdateMetricStyle`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateMetric.kt) | Android 17 MetricStyle values для timers, workouts, travel, compact status metrics и MetricStyle subtext header context |
 
 ### Samsung Now Bar Extras
 
-SDK поддерживает все Samsung Now Bar extras, найденные при декомпиляции Samsung Clock и Samsung Health:
+SDK поддерживает Samsung Now Bar extras и hidden style methods, найденные при декомпиляции Samsung Health и Voice Recorder:
 
 | Extra | Назначение |
 | --- | --- |
@@ -680,7 +767,17 @@ SDK поддерживает все Samsung Now Bar extras, найденные �
 | Capsule | Виджет для обложки складного устройства через `CapsuleConfig` с градиентным фоном |
 | Action Primary Set | Определяет, какой набор кнопок показывать в свёрнутом Now Bar |
 | Sub-Screen Intent | PendingIntent, срабатывающий при нажатии на Now Bar sub-screen |
+| AOD Remote App | `NowBarConfig.aodRemoteApp` или `OngoingExtrasBuilder.setAodRemoteApp(...)` записывает Samsung AOD app name, icon и tap intent |
 | Subst Name | Подстановочное имя, отображаемое в уведомлении |
+| Delete Intent | PendingIntent, срабатывающий при dismiss ongoing update |
+| Unpin Action | `ActionSemantic.UNPIN` для demotion live surface, которую пользователь мониторит, в обычное ongoing-уведомление |
+| Large Icon | Расширенная визуальная идентичность для delivery, media, call и custom Live Updates |
+| Status Chip Time | Absolute `when`/chronometer countdown/count-up для timer, delivery, custom и metric chips |
+| Short Critical Text | Явный источник `setShortCriticalText` для Android Live Update и fallback status chips |
+| BigTextStyle | `CustomCard.bigText(...)` для длинных Live Update деталей без custom RemoteViews |
+| Custom ProgressStyle | `CustomCard` может задавать segments, points, tracker/start/end icons, `styledByProgress` и mirrored Samsung progress segments |
+| Dump Progress | `SamsungOngoingActivityProgress` зеркалит Samsung progress payload внутри dump-style Google Sports / Finance topology |
+| Evidence State | `NowBarNotificationEvidence.inspect(...).samsungNowBar` показывает structured text, visual, action, progress, chronometer, capsule и remote-app extras до posting |
 | App Icon Loading | Загрузка иконки любого приложения для chip/nowbar через `AppIconHelper` |
 
 <details>
@@ -711,6 +808,8 @@ val card = CustomCard.Builder("Download", appIcon, "Downloading...")
 | Остальные устройства | Обычное ongoing-уведомление для `AUTO` / `STANDARD_NOTIFICATION`, без SDK-posting для `NONE` |
 
 Проверить наличие нативной поверхности можно через `NowBarManager.isSupported(context)`, а посмотреть определённую платформу — через `NowBarManager.getSupportedPlatform(context)`.
+Samsung extras применяются, когда есть public Now Bar feature flag или устройство сообщает Samsung manufacturer/brand, потому что некоторые One UI builds не раскрывают стабильный public feature flag.
+Для setup flows `NowBarDiagnostics.resolveNowBarSettingsIntent(context)` открывает documented Samsung Now Bar settings area, если она доступна, а `resolveRecommendedSettingsIntent(context)` fallback'ится через promoted-notification, app-notification и app-details settings.
 
 ### Требования
 
@@ -863,7 +962,7 @@ val card = WorkoutCard(
 | Фалбэк | Звычайнае ongoing-апавяшчэнне праз `FallbackStrategy` |
 | Фармат інтэграцыі | Тэчка [`nowbar/`](./nowbar) капіруецца прама ў ваш праект |
 | Кропкі ўваходу | Прамы manager API, session API і helper для foreground service |
-| Samsung extras | Хранаметр, капсула, загрузка іконак, кнопкі дзеянняў, sub-screen intents |
+| Samsung extras | Хранаметр, капсула, загрузка іконак, AOD remote-app identity, кнопкі дзеянняў, sub-screen intents |
 
 ### Архітэктура
 
@@ -892,11 +991,13 @@ graph TD
 
 | Картка | Сцэнарый | Samsung extras | Live Updates |
 | --- | --- | :---: | :---: |
-| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундамер | ✅ | ✅ |
+| [`TimerCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/TimerCard.kt) | Таймер / секундамер са status-chip chronometer | ✅ | ✅ |
 | [`WorkoutCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/WorkoutCard.kt) | Фітнес-трэкінг | ✅ | ✅ |
 | [`MediaCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MediaCard.kt) | Музыка / падкасты | ✅ | ✅ |
-| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Уваходны / актыўны званок | ✅ | ✅ |
+| [`CallCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CallCard.kt) | Уваходны / актыўны / screening званок | ✅ | ✅ |
 | [`NavigationCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NavigationCard.kt) | Пакрокавая навігацыя | ✅ | ✅ |
+| [`DeliveryCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/DeliveryCard.kt) | Дастаўка ежы / пасылак з Samsung progress segments | ✅ | ✅ |
+| [`MetricCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/MetricCard.kt) | Android 17 MetricStyle metrics | Standard | ✅ |
 | [`CustomCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/CustomCard.kt) | Любы ўласны сцэнарый | ✅ | ✅ |
 
 <details>
@@ -911,7 +1012,10 @@ graph TD
 | Іконкі | `nowbarIcon`, `secondIcon`, `firstIcon`, `secondaryInfoIcon` | Icon | Health, Voice Recorder |
 | Стыль | `style` (0 = толькі notification, 1 = абодва, 2 = толькі Now Bar) | Int | Health, Voice Recorder |
 | Дзеянне | `actionType` (0 = іконка, 1 = тэкст), `actionBgColor`, `actionPrimarySet` | Int | Voice Recorder |
-| Прагрэс | `progress`, `progressMax`, `progressSegments`, `progressColor` | Int / Bundle[] | Health |
+| Прагрэс | `progress`, `progressMax`, `progressSegments`, `progressSegments.progressColor` | Int / Bundle[] | Health |
+| Сегменты прагрэсу | `progressSegments.segmentColor`, `progressSegments.segmentStart` | Int / Float | Health |
+| Progress Icon | `progressSegments.icon` | Icon | Health |
+| AOD Remote App | `aodRemoteAppName`, `aodRemoteAppIcon`, `aodRemoteAppPendingIntent` | CharSequence / Icon / PendingIntent | Google Sports / Finance dumps |
 | Храnaметр | `chronometerRemoteView`, `chronometerRemoteViewTag`, `chronometerRemoteViewPosition` | RemoteViews / String / Int | Voice Recorder |
 | Саб-экран | `nowbarPendingIntentOnSubScreen` | PendingIntent | Voice Recorder |
 | Капсула | `isCapsule`, `capsule_layout`, `capsule_action`, `bg_startColor`, `bg_endColor`, `capsule_priority` | Various | Voice Recorder |
@@ -924,18 +1028,30 @@ graph TD
 | API | Для чаго патрэбна |
 | --- | --- |
 | [`NowBarManager`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarManager.kt) | Вызначэнне падтрымкі, стварэнне channel, build/post/cancel апавяшчэнняў |
-| [`NowBarConfig`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarConfig.kt) | Channel, notification id, fallback і параметры Samsung surface |
-| [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `dismiss()`, `stop()` |
+| [`NowBarDiagnostics`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarDiagnostics.kt) | Device capability report для Samsung extras, hidden style, Live Updates і Now Bar / notification settings shortcuts |
+| [`NowBarReadiness`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarReadiness.kt) | One-shot preflight карткі/config з device capability, Live Updates eligibility, notification evidence, fallback state, action truncation і UX advisories |
+| [`NowBarConfig`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarConfig.kt) | Channel, notification id, fallback, параметры Samsung surface і optional AOD remote-app identity |
+| [`NowBarSession`](./nowbar/src/main/kotlin/com/nowbar/api/NowBarSession.kt) | `start()`, `update()`, `unpin()` / `dismiss()`, `stop()` |
 | [`NowBarForegroundService`](./nowbar/src/main/kotlin/com/nowbar/api/service/NowBarForegroundService.kt) | Базавы helper для доўгажывучых foreground service сцэнарыяў |
-| [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базавая мадэль карткі |
+| [`NowBarCard`](./nowbar/src/main/kotlin/com/nowbar/api/cards/NowBarCard.kt) | Базавая мадэль карткі і optional Live Update subtext |
 | [`ChronometerConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ChronometerConfig.kt) | Жывы хранаметр (RemoteViews) для Now Bar |
 | [`CapsuleConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/CapsuleConfig.kt) | Капсула для вокладкі складных Samsung |
 | [`AppIconHelper`](./nowbar/src/main/kotlin/com/nowbar/api/util/AppIconHelper.kt) | Загрузка іконкі любога дадатку па package name |
 | [`NowBarExtrasKeys`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarExtrasKeys.kt) | Усе знойдзеныя Samsung Now Bar extras ключы |
+| [`SamsungOngoingActivityStyleBuilder`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungOngoingActivityStyleBuilder.kt) | Апцыянальны hidden Samsung `Notification.OngoingActivityStyle` reflection path са справаздачай applied/missing/failed methods |
+| [`SamsungOngoingActivityDumpExtras`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungOngoingActivityDumpExtras.kt) | Dump-parity extras з Samsung AOD Google Sports / Finance картак |
+| [`SamsungNowBarGroupSummaryBuilder`](./nowbar/src/main/kotlin/com/nowbar/api/notification/SamsungNowBarGroupSummaryBuilder.kt) | Summary + child notification тапалогія з Samsung AOD Now Bar dumps |
+| [`LiveUpdateDiagnostics`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateDiagnostics.kt) | Справаздача eligibility для Android 16 promotion, Android ProgressStyle payload, action button evidence, subtext/status chip з compact-chip/delete-intent/action-limit advisories, manifest permission і safe manage-promoted-notifications intent у налады |
+| [`NowBarNotificationEvidence`](./nowbar/src/main/kotlin/com/nowbar/api/notification/NowBarNotificationEvidence.kt) | Інспектар гатовага notification для Samsung extras, structured first-class Now Bar text/visual/action/progress/chronometer/capsule state, dump extras, native style, promoted ongoing, Android action buttons, ProgressStyle payload, subtext/status chips, AOD remote-app identity, structured Samsung views/text/visual/chronometer state, call/progress/metric templates і capsule hints |
+| [`ActionConfig`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Action buttons з semantic types, stable ids, `textOnly(...)`, `disabled(...)`, `NO_ICON` і `UNPIN` |
+| [`NowBarActionExtras`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Захоўвае action id/semantic metadata у `Notification.Action.extras` для diagnostics і real-device evidence |
+| [`NowBarActionLimits`](./nowbar/src/main/kotlin/com/nowbar/api/notification/ActionConfig.kt) | Ліміт action buttons для Android Live Updates / MetricStyle |
+| [`LiveUpdateSemanticStyle`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateSemanticStyle.kt) | Android 17+ semantic title annotations для Live Updates |
+| [`LiveUpdateMetricStyle`](./nowbar/src/main/kotlin/com/nowbar/api/notification/LiveUpdateMetric.kt) | Android 17 MetricStyle values для timers, workouts, travel, compact status metrics і MetricStyle subtext header context |
 
 ### Samsung Now Bar Extras
 
-SDK падтрымлівае ўсе Samsung Now Bar extras, знойдзеныя пры дэкампіляцыі Samsung Clock і Samsung Health:
+SDK падтрымлівае Samsung Now Bar extras і hidden style methods, знойдзеныя пры дэкампіляцыі Samsung Health і Voice Recorder:
 
 | Extra | Прызначэнне |
 | --- | --- |
@@ -943,7 +1059,17 @@ SDK падтрымлівае ўсе Samsung Now Bar extras, знойдзеныя
 | Capsule | Віджэт для вокладкі складной прылады праз `CapsuleConfig` з градыентным фонам |
 | Action Primary Set | Вызначае, які набор кнопак паказваць у згорнутым Now Bar |
 | Sub-Screen Intent | PendingIntent, які спрацоўвае пры націсканні на Now Bar sub-screen |
+| AOD Remote App | `NowBarConfig.aodRemoteApp` або `OngoingExtrasBuilder.setAodRemoteApp(...)` запісвае Samsung AOD app name, icon і tap intent |
 | Subst Name | Падстаноўчае імя, якое адлюстроўваецца ў апавяшчэнні |
+| Delete Intent | PendingIntent, які спрацоўвае пры dismiss ongoing update |
+| Unpin Action | `ActionSemantic.UNPIN` для demotion live surface, якую карыстальнік маніторыць, да звычайнага ongoing-апавяшчэння |
+| Large Icon | Пашыраная візуальная ідэнтычнасць для delivery, media, call і custom Live Updates |
+| Status Chip Time | Absolute `when`/chronometer countdown/count-up для timer, delivery, custom і metric chips |
+| Short Critical Text | Яўная крыніца `setShortCriticalText` для Android Live Update і fallback status chips |
+| BigTextStyle | `CustomCard.bigText(...)` для доўгіх Live Update дэталяў без custom RemoteViews |
+| Custom ProgressStyle | `CustomCard` можа задаваць segments, points, tracker/start/end icons, `styledByProgress` і mirrored Samsung progress segments |
+| Dump Progress | `SamsungOngoingActivityProgress` люструе Samsung progress payload у dump-style Google Sports / Finance topology |
+| Evidence State | `NowBarNotificationEvidence.inspect(...).samsungNowBar` паказвае structured text, visual, action, progress, chronometer, capsule і remote-app extras да posting |
 | App Icon Loading | Загрузка іконкі любога дадатку для chip/nowbar праз `AppIconHelper` |
 
 <details>
@@ -974,6 +1100,8 @@ val card = CustomCard.Builder("Download", appIcon, "Downloading...")
 | Іншыя прылады | Звычайнае ongoing-апавяшчэнне для `AUTO` / `STANDARD_NOTIFICATION`, без SDK-posting для `NONE` |
 
 Праверыць наяўнасць натыўнай паверхні можна праз `NowBarManager.isSupported(context)`, а паглядзець вызначаную платформу — праз `NowBarManager.getSupportedPlatform(context)`.
+Samsung extras прымяняюцца, калі ёсць public Now Bar feature flag або прылада паведамляе Samsung manufacturer/brand, бо некаторыя One UI builds не раскрываюць стабільны public feature flag.
+Для setup flows `NowBarDiagnostics.resolveNowBarSettingsIntent(context)` адкрывае documented Samsung Now Bar settings area, калі яна даступная, а `resolveRecommendedSettingsIntent(context)` fallback'іцца праз promoted-notification, app-notification і app-details settings.
 
 ### Патрабаванні
 

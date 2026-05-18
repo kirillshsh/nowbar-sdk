@@ -1,7 +1,6 @@
 package com.nowbar.api.service
 
 import android.app.Notification
-import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.lifecycle.LifecycleService
@@ -20,6 +19,7 @@ abstract class NowBarForegroundService : LifecycleService() {
 
     companion object {
         const val DEFAULT_NOTIFICATION_ID = 200
+        private const val FOREGROUND_SERVICE_TYPE_MANIFEST = -1
     }
 
     private var currentNotificationId: Int = DEFAULT_NOTIFICATION_ID
@@ -36,7 +36,7 @@ abstract class NowBarForegroundService : LifecycleService() {
     protected fun startNowBar(
         notification: Notification,
         notificationId: Int = DEFAULT_NOTIFICATION_ID,
-        foregroundServiceType: Int = ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
+        foregroundServiceType: Int = FOREGROUND_SERVICE_TYPE_MANIFEST
     ) {
         currentNotificationId = notificationId
         ServiceCompat.startForeground(
@@ -50,7 +50,7 @@ abstract class NowBarForegroundService : LifecycleService() {
     protected fun startNowBar(
         config: NowBarConfig,
         card: NowBarCard,
-        foregroundServiceType: Int = ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
+        foregroundServiceType: Int = FOREGROUND_SERVICE_TYPE_MANIFEST
     ) {
         startNowBar(
             notification = buildNowBarNotification(config, card),

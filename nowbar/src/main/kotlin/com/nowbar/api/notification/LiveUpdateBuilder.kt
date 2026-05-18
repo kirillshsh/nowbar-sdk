@@ -1,9 +1,9 @@
 package com.nowbar.api.notification
 
 import android.os.Build
+import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.core.app.NotificationCompat
 import com.nowbar.api.cards.NowBarCard
-import com.nowbar.api.cards.TimerCard
 
 /**
  * Thin AndroidX wrapper for Android 16 Live Updates / promoted ongoing notifications.
@@ -17,6 +17,7 @@ class LiveUpdateBuilder {
 
     companion object {
         @JvmStatic
+        @ChecksSdkIntAtLeast(api = 36)
         fun isSupported(): Boolean = Build.VERSION.SDK_INT >= 36
     }
 
@@ -29,12 +30,18 @@ class LiveUpdateBuilder {
 
         builder.setRequestPromotedOngoing(true)
 
-        card.toProgress()?.let { progress ->
+        val progress = card.toProgress()
+        if (progress != null || card.isProgressIndeterminate()) {
             val config = ProgressStyleAdapter.adapt(card)
 
             val style = NotificationCompat.ProgressStyle()
-                .setStyledByProgress(false)
-                .setProgress(progress)
+                .setStyledByProgress(config.styledByProgress)
+
+            if (card.isProgressIndeterminate()) {
+                style.setProgressIndeterminate(true)
+            } else {
+                style.setProgress(progress ?: 0)
+            }
 
             if (config.segments.isNotEmpty()) {
                 style.setProgressSegments(
@@ -63,27 +70,9 @@ class LiveUpdateBuilder {
             builder.setStyle(style)
         }
 
-        configureChip(builder, card)
+        StatusChipAdapter.apply(builder, card)
     }
 
-    private fun configureChip(
-        builder: NotificationCompat.Builder,
-        card: NowBarCard
-    ) {
-        if (ProgressStyleAdapter.shouldUseChronometer(card)) {
-            val timer = card as TimerCard
-            val whenTime = System.currentTimeMillis() + timer.remainingDuration.inWholeMilliseconds
-
-            builder
-                .setWhen(whenTime)
-                .setShowWhen(true)
-                .setUsesChronometer(true)
-                .setChronometerCountDown(true)
-            return
-        }
-
-        ProgressStyleAdapter.getChipText(card)
-            ?.takeIf { it.isNotBlank() }
-            ?.let(builder::setShortCriticalText)
-    }
+    internal fun shortCriticalTextFor(card: NowBarCard): String? =
+        StatusChipAdapter.shortCriticalTextFor(card)
 }

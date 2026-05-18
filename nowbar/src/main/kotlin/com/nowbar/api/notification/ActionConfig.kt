@@ -1,7 +1,12 @@
 package com.nowbar.api.notification
 
+import android.app.Notification
 import android.app.PendingIntent
+import android.content.Context
+import android.graphics.drawable.Icon
+import android.os.Bundle
 import androidx.annotation.DrawableRes
+import androidx.core.app.NotificationCompat
 
 /**
  * Describes a single notification action button for Now Bar ongoing notifications.
@@ -12,17 +17,92 @@ import androidx.annotation.DrawableRes
  *
  * @param id          Stable identifier for this action (used for dedup and logging).
  * @param text        User-visible button label (e.g. "Pause", "Resume", "Stop").
- * @param iconRes     Drawable resource for the action icon.
+ * @param iconRes     Drawable resource for the action icon, or [ActionConfig.NO_ICON] for text-only actions.
  * @param intent      [PendingIntent] fired when the user taps the action, or `null` for disabled actions.
  * @param semantic    Machine-readable semantic type for programmatic handling.
  */
 data class ActionConfig(
     val id: String,
     val text: String,
-    @DrawableRes val iconRes: Int,
+    @DrawableRes val iconRes: Int = 0,
     val intent: PendingIntent? = null,
     val semantic: ActionSemantic = ActionSemantic.CUSTOM
-)
+) {
+    companion object {
+        const val NO_ICON = 0
+
+        @JvmStatic
+        fun textOnly(
+            id: String,
+            text: String,
+            intent: PendingIntent? = null,
+            semantic: ActionSemantic = ActionSemantic.CUSTOM
+        ): ActionConfig = ActionConfig(
+            id = id,
+            text = text,
+            iconRes = NO_ICON,
+            intent = intent,
+            semantic = semantic
+        )
+
+        @JvmStatic
+        fun disabled(
+            id: String,
+            text: String,
+            semantic: ActionSemantic = ActionSemantic.CUSTOM
+        ): ActionConfig = textOnly(id = id, text = text, intent = null, semantic = semantic)
+    }
+}
+
+/**
+ * Android Live Updates and MetricStyle surfaces display at most three action buttons.
+ */
+object NowBarActionLimits {
+    const val MAX_ACTIONS = 3
+}
+
+object NowBarActionExtras {
+    const val ACTION_ID = "com.nowbar.action.ID"
+    const val ACTION_SEMANTIC = "com.nowbar.action.SEMANTIC"
+
+    @JvmStatic
+    fun toBundle(action: ActionConfig): Bundle = Bundle().apply {
+        putString(ACTION_ID, action.id)
+        putString(ACTION_SEMANTIC, action.semantic.name)
+    }
+
+    @JvmStatic
+    fun readId(extras: Bundle?): String? =
+        extras?.getString(ACTION_ID)?.takeIf { it.isNotBlank() }
+
+    @JvmStatic
+    fun readSemantic(extras: Bundle?): ActionSemantic? =
+        extras?.getString(ACTION_SEMANTIC)
+            ?.let { value -> runCatching { ActionSemantic.valueOf(value) }.getOrNull() }
+}
+
+internal fun ActionConfig.toCompatAction(): NotificationCompat.Action =
+    NotificationCompat.Action.Builder(iconRes, text, intent)
+        .addExtras(NowBarActionExtras.toBundle(this))
+        .build()
+
+internal fun ActionConfig.toPlatformAction(context: Context): Notification.Action {
+    val icon = iconRes
+        .takeUnless { it == ActionConfig.NO_ICON }
+        ?.let { Icon.createWithResource(context, it) }
+    return Notification.Action.Builder(icon, text, intent)
+        .addExtras(NowBarActionExtras.toBundle(this))
+        .build()
+}
+
+internal fun Notification.Action.toAndroidActionState(): AndroidActionState =
+    AndroidActionState(
+        title = title?.toString().orEmpty(),
+        hasIcon = getIcon() != null,
+        hasIntent = actionIntent != null,
+        id = NowBarActionExtras.readId(extras),
+        semantic = NowBarActionExtras.readSemantic(extras)
+    )
 
 /**
  * Semantic types for notification actions, derived from Samsung Health action patterns.
@@ -40,6 +120,9 @@ data class ActionConfig(
  * - 1 = Active/Running (show "Pause" + "Stop")
  * - 2 = Paused (show "Resume" + "Stop")
  * - 3 = Auto-paused (show disabled "Pause")
+ *
+ * Android Live Updates guidance also recommends an Unpin action when the user
+ * explicitly starts monitoring a background event such as a sports game.
  */
 enum class ActionSemantic {
     /** Pause an active workout / timer. */
@@ -52,6 +135,8 @@ enum class ActionSemantic {
     NEXT,
     /** View workout result / details. */
     VIEW_RESULT,
+    /** Stop showing the enhanced live surface while keeping the underlying activity alive. */
+    UNPIN,
     /** Delete the notification (dismiss action). */
     DELETE,
     /** Application-specific custom action. */
@@ -103,6 +188,7 @@ object SamsungHealthActions {
     const val RESUME = "com.samsung.android.app.shealth.tracker.action.RESUME"
     const val DELETE = "com.samsung.android.app.shealth.tracker.action.DELETE_NOTIFICATION"
     const val LOCALE_CHANGED = "android.intent.action.LOCALE_CHANGED"
+    const val DATE_CHANGED = "android.intent.action.DATE_CHANGED"
     const val CALLER_ID_KEY = "com.samsung.android.app.shealth.tracker.exercise.notification_caller_id"
 }
 

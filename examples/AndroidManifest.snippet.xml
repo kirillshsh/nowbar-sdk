@@ -9,9 +9,16 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
+    <uses-feature
+        android:name="com.samsung.feature.nowbar"
+        android:required="false" />
+
     <application>
         <meta-data
             android:name="com.samsung.android.support.ongoing_activity"
+            android:value="true" />
+        <meta-data
+            android:name="com.samsung.android.nowbar.enabled"
             android:value="true" />
 
         <service

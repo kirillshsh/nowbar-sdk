@@ -16,14 +16,18 @@ data class MediaCard(
     val isPlaying: Boolean = false,
     val playAction: PendingIntent? = null,
     val skipAction: PendingIntent? = null,
-    val firstIcon: IconCompat? = null
+    val firstIcon: IconCompat? = null,
+    override val deleteIntent: PendingIntent? = null,
+    override val largeIcon: IconCompat? = null
 ) : NowBarCard(
     type = CardType.MEDIA,
     title = title,
     icon = icon,
     accentColor = accentColor,
     tapAction = tapAction,
-    chipText = chipText
+    chipText = chipText,
+    deleteIntent = deleteIntent,
+    largeIcon = largeIcon
 ) {
     override fun toPrimaryInfo(): String = title
 
@@ -48,6 +52,8 @@ data class MediaCard(
         private var accentColor: Int? = null
         private var tapAction: PendingIntent? = null
         private var chipText: String? = null
+        private var deleteIntent: PendingIntent? = null
+        private var largeIcon: IconCompat? = null
         private var artist: String? = null
         private var album: String? = null
         private var albumArt: Bitmap? = null
@@ -59,6 +65,8 @@ data class MediaCard(
         fun accentColor(color: Int) = apply { this.accentColor = color }
         fun tapAction(action: PendingIntent) = apply { this.tapAction = action }
         fun chipText(text: String) = apply { this.chipText = text }
+        fun deleteIntent(intent: PendingIntent) = apply { this.deleteIntent = intent }
+        fun largeIcon(icon: IconCompat) = apply { this.largeIcon = icon }
         fun artist(artist: String) = apply { this.artist = artist }
         fun album(album: String) = apply { this.album = album }
         fun albumArt(bitmap: Bitmap) = apply { this.albumArt = bitmap }
@@ -79,7 +87,9 @@ data class MediaCard(
             isPlaying = isPlaying,
             playAction = playAction,
             skipAction = skipAction,
-            firstIcon = firstIcon
+            firstIcon = firstIcon,
+            deleteIntent = deleteIntent,
+            largeIcon = largeIcon
         )
 
         companion object {

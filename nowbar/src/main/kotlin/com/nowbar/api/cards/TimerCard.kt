@@ -2,6 +2,7 @@ package com.nowbar.api.cards
 
 import android.app.PendingIntent
 import androidx.core.graphics.drawable.IconCompat
+import java.util.Locale
 import kotlin.time.Duration
 
 data class TimerCard(
@@ -14,14 +15,18 @@ data class TimerCard(
     val remainingDuration: Duration,
     val isCountDown: Boolean = true,
     val completionAction: PendingIntent? = null,
-    val subScreenIntent: PendingIntent? = null
+    val subScreenIntent: PendingIntent? = null,
+    override val deleteIntent: PendingIntent? = null,
+    override val largeIcon: IconCompat? = null
 ) : NowBarCard(
     type = CardType.TIMER,
     title = title,
     icon = icon,
     accentColor = accentColor,
     tapAction = tapAction,
-    chipText = chipText
+    chipText = chipText,
+    deleteIntent = deleteIntent,
+    largeIcon = largeIcon
 ) {
     override fun toPrimaryInfo(): String = title
 
@@ -31,9 +36,9 @@ data class TimerCard(
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
         return if (hours > 0) {
-            String.format("%d:%02d:%02d", hours, minutes, seconds)
+            String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
         } else {
-            String.format("%02d:%02d", minutes, seconds)
+            String.format(Locale.US, "%02d:%02d", minutes, seconds)
         }
     }
 
@@ -50,6 +55,19 @@ data class TimerCard(
 
     override fun toNowBarPrimaryInfo(): String = toSecondaryInfo()
 
+    override fun toChipWhenTimeMillis(): Long? {
+        val now = System.currentTimeMillis()
+        return if (isCountDown) {
+            remainingDuration
+                .takeIf { it.inWholeMilliseconds > 0L }
+                ?.let { now + it.inWholeMilliseconds }
+        } else {
+            now - (totalDuration - remainingDuration).inWholeMilliseconds.coerceAtLeast(0L)
+        }
+    }
+
+    override fun isChipChronometerCountDown(): Boolean = isCountDown
+
     override fun toSubstName(): String = title
 
     override fun hasChronometerSupport(): Boolean = true
@@ -64,6 +82,8 @@ data class TimerCard(
         private var accentColor: Int? = null
         private var tapAction: PendingIntent? = null
         private var chipText: String? = null
+        private var deleteIntent: PendingIntent? = null
+        private var largeIcon: IconCompat? = null
         private var remainingDuration: Duration = totalDuration
         private var isCountDown: Boolean = true
         private var completionAction: PendingIntent? = null
@@ -72,6 +92,8 @@ data class TimerCard(
         fun accentColor(color: Int) = apply { this.accentColor = color }
         fun tapAction(action: PendingIntent) = apply { this.tapAction = action }
         fun chipText(text: String) = apply { this.chipText = text }
+        fun deleteIntent(intent: PendingIntent) = apply { this.deleteIntent = intent }
+        fun largeIcon(icon: IconCompat) = apply { this.largeIcon = icon }
         fun remainingDuration(duration: Duration) = apply { this.remainingDuration = duration }
         fun isCountDown(countDown: Boolean) = apply { this.isCountDown = countDown }
         fun completionAction(action: PendingIntent) = apply { this.completionAction = action }
@@ -87,7 +109,9 @@ data class TimerCard(
             remainingDuration = remainingDuration,
             isCountDown = isCountDown,
             completionAction = completionAction,
-            subScreenIntent = subScreenIntent
+            subScreenIntent = subScreenIntent,
+            deleteIntent = deleteIntent,
+            largeIcon = largeIcon
         )
 
         companion object {

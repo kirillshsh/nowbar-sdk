@@ -2,9 +2,12 @@ package com.nowbar.api.cards
 
 import android.app.PendingIntent
 import androidx.core.graphics.drawable.IconCompat
+import com.nowbar.api.notification.ActionConfig
+import com.nowbar.api.notification.LiveUpdateMetricStyle
+import com.nowbar.api.notification.LiveUpdateSemanticStyle
 
 enum class CardType {
-    TIMER, MEDIA, NAVIGATION, WORKOUT, CALL, STOPWATCH, CUSTOM
+    TIMER, MEDIA, NAVIGATION, WORKOUT, CALL, DELIVERY, METRIC, STOPWATCH, CUSTOM
 }
 
 sealed class NowBarCard(
@@ -13,7 +16,9 @@ sealed class NowBarCard(
     open val icon: IconCompat,
     open val accentColor: Int? = null,
     open val tapAction: PendingIntent? = null,
-    open val chipText: String? = null
+    open val chipText: String? = null,
+    open val deleteIntent: PendingIntent? = null,
+    open val largeIcon: IconCompat? = null
 ) {
     abstract fun toPrimaryInfo(): String
     abstract fun toSecondaryInfo(): String
@@ -24,10 +29,31 @@ sealed class NowBarCard(
 
     open fun toProgressMax(): Int = 100
 
+    open fun isProgressIndeterminate(): Boolean = false
+
     open fun toChipText(): String? =
         chipText ?: toNowBarSecondaryInfo() ?: toSecondaryInfo().takeIf { it.isNotBlank() }
 
+    open fun toShortCriticalText(): String? = chipText?.takeIf { it.isNotBlank() }
+
+    /** Optional Live Update header/context text written through Notification.setSubText(...). */
+    open fun toSubText(): String? = null
+
     open fun toChipIcon(): IconCompat = icon
+
+    open fun toChipWhenTimeMillis(): Long? = null
+
+    open fun isChipChronometerCountDown(): Boolean = false
+
+    open fun toLargeIcon(): IconCompat? = largeIcon
+
+    open fun toDeleteIntent(): PendingIntent? = deleteIntent
+
+    open fun toSemanticStyle(): LiveUpdateSemanticStyle? = null
+
+    open fun toMetricStyle(): LiveUpdateMetricStyle? = null
+
+    open fun toBigText(): CharSequence? = null
 
     open fun toChipBackgroundColor(): Int? = accentColor
 
@@ -57,4 +83,7 @@ sealed class NowBarCard(
 
     /** Action button background color for the Now Bar. */
     open fun toActionBgColor(): Int? = accentColor
+
+    /** Optional standard notification actions rendered alongside the ongoing card. */
+    open fun toActions(): List<ActionConfig> = emptyList()
 }

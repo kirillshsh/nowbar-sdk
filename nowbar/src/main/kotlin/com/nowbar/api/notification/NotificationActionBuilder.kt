@@ -216,10 +216,11 @@ class NotificationActionBuilder(private val context: Context) {
         actions: List<Notification.Action>,
         hasNowBarFeature: Boolean
     ) {
+        val visibleActions = actions.take(NowBarActionLimits.MAX_ACTIONS)
         if (hasNowBarFeature) {
-            builder.setActions(*actions.toTypedArray())
+            builder.setActions(*visibleActions.toTypedArray())
         } else {
-            actions.forEach { builder.addAction(it) }
+            visibleActions.forEach { builder.addAction(it) }
         }
     }
 
@@ -229,9 +230,13 @@ class NotificationActionBuilder(private val context: Context) {
      *
      * @param action  Broadcast action string (e.g. [SamsungHealthActions.PAUSE]).
      */
-    fun createBroadcastIntent(action: String): PendingIntent {
+    fun createBroadcastIntent(
+        action: String,
+        callerId: String = context.packageName
+    ): PendingIntent {
         val intent = Intent(action).apply {
             setPackage(context.packageName)
+            putExtra(SamsungHealthActions.CALLER_ID_KEY, callerId)
         }
         return PendingIntent.getBroadcast(
             context,

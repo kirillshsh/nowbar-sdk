@@ -130,7 +130,7 @@ data class GuidingLightParams(
 ) {
     companion object {
         /** Default light color from Samsung: #4DFFFFFF (white with 30% alpha) */
-        const val DEFAULT_LIGHT_COLOR: Int = 0x4DFFFFFF.toInt()
+        const val DEFAULT_LIGHT_COLOR: Int = 0x4DFFFFFF
 
         /** Samsung preset: standard configuration (outerSaturation=1.15) */
         val SAMSUNG_STANDARD = GuidingLightParams(saturation = 1.15f)

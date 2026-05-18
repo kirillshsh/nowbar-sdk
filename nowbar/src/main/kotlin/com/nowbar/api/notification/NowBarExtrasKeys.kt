@@ -67,6 +67,17 @@ object NowBarExtrasKeys {
     /** PendingIntent fired when the Now Bar sub-screen is tapped (Parcelable, PendingIntent). */
     const val NOWBAR_PENDING_INTENT_ON_SUB_SCREEN = "android.ongoingActivityNoti.nowbarPendingIntentOnSubScreen"
 
+    // ── AOD Remote App Identity ────────────────────────────────────────
+
+    /** PendingIntent fired when the Samsung AOD / Now Bar remote app identity is tapped. */
+    const val AOD_REMOTE_APP_PENDING_INTENT = "android.ongoingActivityNoti.aodRemoteAppPendingIntent"
+
+    /** App icon shown by Samsung AOD / Now Bar remote app identity (Parcelable, Icon). */
+    const val AOD_REMOTE_APP_ICON = "android.ongoingActivityNoti.aodRemoteAppIcon"
+
+    /** App name shown by Samsung AOD / Now Bar remote app identity (CharSequence). */
+    const val AOD_REMOTE_APP_NAME = "android.ongoingActivityNoti.aodRemoteAppName"
+
     // ── Substitution ────────────────────────────────────────────────────
 
     /** Substitution name displayed in the notification (CharSequence). E.g. "Stopwatch", "Timer". */

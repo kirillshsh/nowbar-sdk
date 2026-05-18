@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.graphics.drawable.Icon
 import android.os.Bundle
+import android.os.Parcelable
 import android.widget.RemoteViews
 
 /**
@@ -26,9 +27,9 @@ object SamsungOngoingActivityDumpKeys {
     const val REDUCED_IMAGES = "android.reduced.images"
 
     // Remote app identity shown by Samsung AOD / Now Bar.
-    const val AOD_REMOTE_APP_PENDING_INTENT = "android.ongoingActivityNoti.aodRemoteAppPendingIntent"
-    const val AOD_REMOTE_APP_ICON = "android.ongoingActivityNoti.aodRemoteAppIcon"
-    const val AOD_REMOTE_APP_NAME = "android.ongoingActivityNoti.aodRemoteAppName"
+    const val AOD_REMOTE_APP_PENDING_INTENT = NowBarExtrasKeys.AOD_REMOTE_APP_PENDING_INTENT
+    const val AOD_REMOTE_APP_ICON = NowBarExtrasKeys.AOD_REMOTE_APP_ICON
+    const val AOD_REMOTE_APP_NAME = NowBarExtrasKeys.AOD_REMOTE_APP_NAME
 
     // Main Samsung OngoingActivity / Now Bar extras.
     const val STYLE = "android.ongoingActivityNoti.style"
@@ -135,6 +136,14 @@ data class SamsungOngoingActivityChronometerState(
     val start: Boolean? = null
 )
 
+data class SamsungOngoingActivityProgress(
+    val current: Int? = null,
+    val max: Int = OngoingExtrasBuilder.MAX_PROGRESS,
+    val color: Int? = null,
+    val segmentIcon: Icon? = null,
+    val segments: List<ProgressSegment> = emptyList()
+)
+
 data class SamsungPdeState(
     val firstShownTimeMs: Long? = null,
     val firstExpandedTimeMs: Long? = null,
@@ -160,6 +169,7 @@ object SamsungOngoingActivityDumpExtras {
         views: SamsungOngoingActivityViews = SamsungOngoingActivityViews(),
         visuals: SamsungOngoingActivityVisuals = SamsungOngoingActivityVisuals(),
         chronometer: SamsungOngoingActivityChronometerState = SamsungOngoingActivityChronometerState(),
+        progress: SamsungOngoingActivityProgress? = null,
         pde: SamsungPdeState? = null,
         substName: CharSequence? = null,
         style: Int = NowBarExtrasKeys.Style.BOTH,
@@ -224,6 +234,7 @@ object SamsungOngoingActivityDumpExtras {
         chronometer.speed?.let { putFloat(SamsungOngoingActivityDumpKeys.CHRONOMETER_SPEED, it) }
         chronometer.start?.let { putBoolean(SamsungOngoingActivityDumpKeys.CHRONOMETER_START, it) }
 
+        progress?.let { putProgressState(it) }
         pde?.let { putPdeState(it) }
     }
 
@@ -243,6 +254,30 @@ object SamsungOngoingActivityDumpExtras {
         pde.notificationPackage?.let { putString(SamsungOngoingActivityDumpKeys.PDE_NOTI_PKG, it) }
         if (pde.notificationTag != null) {
             putString(SamsungOngoingActivityDumpKeys.PDE_NOTI_TAG, pde.notificationTag)
+        }
+    }
+
+    private fun Bundle.putProgressState(progress: SamsungOngoingActivityProgress) {
+        require(progress.max > 0) { "Progress max must be positive" }
+
+        progress.current?.let { current ->
+            putInt(NowBarExtrasKeys.PROGRESS, current.coerceIn(0, progress.max))
+            putInt(NowBarExtrasKeys.PROGRESS_MAX, progress.max)
+        }
+        progress.color?.let { putInt(NowBarExtrasKeys.PROGRESS_COLOR, it) }
+        progress.segmentIcon?.let { putParcelable(NowBarExtrasKeys.PROGRESS_SEGMENT_ICON, it) }
+
+        if (progress.segments.isNotEmpty()) {
+            putParcelableArray(
+                NowBarExtrasKeys.PROGRESS_SEGMENTS,
+                progress.segments.sortedBy { it.startPosition }.map { segment ->
+                    Bundle().apply {
+                        putFloat(NowBarExtrasKeys.PROGRESS_SEGMENT_START, segment.startPosition)
+                        putInt(NowBarExtrasKeys.PROGRESS_SEGMENT_COLOR, segment.color)
+                        segment.icon?.let { putParcelable(NowBarExtrasKeys.PROGRESS_SEGMENT_ICON, it) }
+                    }
+                }.toTypedArray<Parcelable>()
+            )
         }
     }
 }

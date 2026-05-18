@@ -1,9 +1,12 @@
 package com.nowbar.api.notification
 
 import android.graphics.Color
+import androidx.core.graphics.toColorInt
 import com.nowbar.api.cards.CallCard
 import com.nowbar.api.cards.CustomCard
+import com.nowbar.api.cards.DeliveryCard
 import com.nowbar.api.cards.MediaCard
+import com.nowbar.api.cards.MetricCard
 import com.nowbar.api.cards.NavigationCard
 import com.nowbar.api.cards.NowBarCard
 import com.nowbar.api.cards.TimerCard
@@ -27,9 +30,11 @@ object ProgressStyleAdapter {
             is TimerCard -> adaptTimer(card)
             is WorkoutCard -> adaptWorkout(card)
             is NavigationCard -> adaptNavigation(card)
+            is DeliveryCard -> adaptDelivery(card)
             is CustomCard -> adaptCustom(card)
             is CallCard -> adaptGeneric(card)
             is MediaCard -> adaptGeneric(card)
+            is MetricCard -> adaptGeneric(card)
         }
     }
 
@@ -42,9 +47,11 @@ object ProgressStyleAdapter {
             is TimerCard -> null // uses chronometer instead
             is WorkoutCard -> card.chipText ?: formatWorkoutChip(card)
             is NavigationCard -> card.chipText ?: card.distanceToTurn
+            is DeliveryCard -> card.toChipText()
             is CustomCard -> card.chipText
             is CallCard -> card.chipText ?: card.callerName
             is MediaCard -> card.chipText ?: card.title
+            is MetricCard -> card.chipText
         }
     }
 
@@ -60,7 +67,7 @@ object ProgressStyleAdapter {
 
     private fun adaptTimer(card: TimerCard): ProgressStyleConfig {
         // Single segment spanning the full bar, colored with accent or default blue
-        val color = card.accentColor ?: Color.parseColor("#2196F3")
+        val color = card.accentColor ?: "#2196F3".toColorInt()
         return ProgressStyleConfig(
             segments = listOf(StyleSegment(length = 100, color = color))
         )
@@ -69,7 +76,7 @@ object ProgressStyleAdapter {
     // --- Workout ---
 
     private fun adaptWorkout(card: WorkoutCard): ProgressStyleConfig {
-        val color = card.accentColor ?: Color.parseColor("#0FCF6E")
+        val color = card.accentColor ?: "#0FCF6E".toColorInt()
 
         // Build distance milestone segments if distance is available
         val segments = if (card.distance != null && card.distance > 0) {
@@ -103,7 +110,7 @@ object ProgressStyleAdapter {
 
         return listOf(
             StyleSegment(length = progress, color = color),
-            StyleSegment(length = 100 - progress, color = Color.parseColor("#E0E0E0"))
+            StyleSegment(length = 100 - progress, color = "#E0E0E0".toColorInt())
         )
     }
 
@@ -143,26 +150,51 @@ object ProgressStyleAdapter {
     // --- Navigation ---
 
     private fun adaptNavigation(card: NavigationCard): ProgressStyleConfig {
-        val color = card.accentColor ?: Color.parseColor("#4285F4")
+        val color = card.accentColor ?: "#4285F4".toColorInt()
         return ProgressStyleConfig(
             segments = listOf(StyleSegment(length = 100, color = color)),
             trackerIcon = card.turnIcon // turn arrow as progress tracker
         )
     }
 
+    // --- Delivery / order tracking ---
+
+    private fun adaptDelivery(card: DeliveryCard): ProgressStyleConfig {
+        val color = card.accentColor ?: "#00AEEF".toColorInt()
+        val progress = card.toProgress() ?: 0
+        val milestonePoints = listOf(25, 50, 75, 100)
+            .filter { it <= progress }
+            .map { point -> StylePoint(position = point, color = color) }
+
+        return ProgressStyleConfig(
+            segments = List(4) { StyleSegment(length = 25, color = color) },
+            points = milestonePoints,
+            trackerIcon = card.trackerIcon ?: card.icon,
+            startIcon = card.startIcon,
+            endIcon = card.endIcon
+        )
+    }
+
     // --- Custom ---
 
     private fun adaptCustom(card: CustomCard): ProgressStyleConfig {
-        val color = card.customProgressColor ?: card.accentColor ?: Color.parseColor("#2196F3")
+        val color = card.customProgressColor ?: card.accentColor ?: "#2196F3".toColorInt()
+        val segments = card.progressSegments.takeIf { it.isNotEmpty() }
+            ?: listOf(StyleSegment(length = card.toProgressMax(), color = color))
         return ProgressStyleConfig(
-            segments = listOf(StyleSegment(length = 100, color = color))
+            segments = segments,
+            points = card.progressPoints,
+            trackerIcon = card.progressTrackerIcon,
+            startIcon = card.progressStartIcon,
+            endIcon = card.progressEndIcon,
+            styledByProgress = card.progressStyledByProgress
         )
     }
 
     // --- Generic fallback ---
 
     private fun adaptGeneric(card: NowBarCard): ProgressStyleConfig {
-        val color = card.accentColor ?: Color.parseColor("#2196F3")
+        val color = card.accentColor ?: "#2196F3".toColorInt()
         return ProgressStyleConfig(
             segments = listOf(StyleSegment(length = 100, color = color))
         )

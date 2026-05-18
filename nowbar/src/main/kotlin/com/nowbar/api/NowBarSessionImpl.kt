@@ -3,6 +3,7 @@ package com.nowbar.api
 import android.content.Context
 import androidx.core.app.NotificationManagerCompat
 import com.nowbar.api.cards.NowBarCard
+import com.nowbar.api.fallback.FallbackStrategy
 import com.nowbar.api.fallback.FallbackStrategyResolver
 import com.nowbar.api.notification.NowBarNotificationBuilder
 import com.nowbar.api.notification.SafeNotificationPoster
@@ -33,8 +34,11 @@ internal class NowBarSessionImpl(
         }
 
         lastCard = card
-        post(card, config.samsungStyle, config.requestPromotedOngoing)
-        _state.value = SessionState.ACTIVE
+        _state.value = if (post(card, config.samsungStyle, config.requestPromotedOngoing)) {
+            SessionState.ACTIVE
+        } else {
+            SessionState.IDLE
+        }
     }
 
     override fun update(card: NowBarCard) = synchronized(lock) {
@@ -43,25 +47,33 @@ internal class NowBarSessionImpl(
         }
 
         lastCard = card
-        post(
-            card = card,
-            samsungStyle = currentSamsungStyle(),
-            requestPromotedOngoing = currentPromotedState()
-        )
+        val posted = if (_state.value == SessionState.PAUSED) {
+            postStandard(card)
+        } else {
+            post(
+                card = card,
+                samsungStyle = config.samsungStyle,
+                requestPromotedOngoing = config.requestPromotedOngoing
+            )
+        }
+        if (!posted) {
+            _state.value = SessionState.PAUSED
+        }
     }
 
-    override fun dismiss() = synchronized(lock) {
+    override fun unpin() = synchronized(lock) {
         check(_state.value == SessionState.ACTIVE || _state.value == SessionState.PAUSED) {
-            "Session must be ACTIVE or PAUSED before dismiss()."
+            "Session must be ACTIVE or PAUSED before unpin()."
         }
 
         val card = lastCard ?: return
-        post(
-            card = card,
-            samsungStyle = NowBarConfig.STYLE_NOTIFICATION_ONLY,
-            requestPromotedOngoing = false
-        )
-        _state.value = SessionState.PAUSED
+        if (postStandard(card)) {
+            _state.value = SessionState.PAUSED
+        }
+    }
+
+    override fun dismiss() {
+        unpin()
     }
 
     override fun stop() = synchronized(lock) {
@@ -71,36 +83,43 @@ internal class NowBarSessionImpl(
         _state.value = SessionState.STOPPED
     }
 
-    private fun currentSamsungStyle(): Int {
-        return if (_state.value == SessionState.PAUSED) {
-            NowBarConfig.STYLE_NOTIFICATION_ONLY
-        } else {
-            config.samsungStyle
-        }
-    }
-
-    private fun currentPromotedState(): Boolean =
-        _state.value != SessionState.PAUSED && config.requestPromotedOngoing
-
     private fun post(
         card: NowBarCard,
         samsungStyle: Int,
         requestPromotedOngoing: Boolean
-    ) {
+    ): Boolean {
         val fallback = FallbackStrategyResolver.resolve(
             strategy = config.fallbackStrategy,
             nativeSurfaceSupported = FeatureDetector.isNativeSurfaceSupported(context)
         )
 
         if (!fallback.shouldPost) {
-            return
+            return false
         }
 
-        SafeNotificationPoster.notify(
+        NowBarManager.createNotificationChannel(context, config)
+
+        return SafeNotificationPoster.notify(
             context = context,
             notificationManager = notificationManager,
             notificationId = config.notificationId,
             notification = notificationBuilder.build(card, samsungStyle, requestPromotedOngoing)
+        )
+    }
+
+    private fun postStandard(card: NowBarCard): Boolean {
+        val unpinnedConfig = config.copy(
+            fallbackStrategy = FallbackStrategy.STANDARD_NOTIFICATION,
+            requestPromotedOngoing = false
+        )
+
+        NowBarManager.createNotificationChannel(context, unpinnedConfig)
+
+        return SafeNotificationPoster.notify(
+            context = context,
+            notificationManager = notificationManager,
+            notificationId = unpinnedConfig.notificationId,
+            notification = NowBarNotificationBuilder(context, unpinnedConfig).build(card)
         )
     }
 }

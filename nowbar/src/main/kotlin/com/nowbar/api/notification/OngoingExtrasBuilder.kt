@@ -43,6 +43,9 @@ class OngoingExtrasBuilder {
         const val KEY_ACTION_BG_COLOR = "android.ongoingActivityNoti.actionBgColor"
         const val KEY_FIRST_ICON = "android.ongoingActivityNoti.firstIcon"
         const val KEY_SECONDARY_INFO_ICON = "android.ongoingActivityNoti.secondaryInfoIcon"
+        const val KEY_AOD_REMOTE_APP_PENDING_INTENT = NowBarExtrasKeys.AOD_REMOTE_APP_PENDING_INTENT
+        const val KEY_AOD_REMOTE_APP_ICON = NowBarExtrasKeys.AOD_REMOTE_APP_ICON
+        const val KEY_AOD_REMOTE_APP_NAME = NowBarExtrasKeys.AOD_REMOTE_APP_NAME
 
         const val STYLE_NOTIFICATION_ONLY = 0
         const val STYLE_BOTH = 1
@@ -59,6 +62,7 @@ class OngoingExtrasBuilder {
     private var progress: Int? = null
     private var progressMax: Int = MAX_PROGRESS
     private var progressColor: Int? = null
+    private var progressSegmentIcon: Icon? = null
     private var segments: List<ProgressSegment> = emptyList()
     private var showSmallIcon: Boolean = true
     private var nowbarIcon: Icon? = null
@@ -72,6 +76,7 @@ class OngoingExtrasBuilder {
     private var actionBgColor: Int? = null
     private var firstIcon: Icon? = null
     private var secondaryInfoIcon: Icon? = null
+    private var aodRemoteApp: SamsungRemoteAppConfig? = null
 
     fun setStyle(style: Int): OngoingExtrasBuilder = apply {
         this.style = style
@@ -107,11 +112,19 @@ class OngoingExtrasBuilder {
         this.progressColor = color
     }
 
+    fun setProgressSegmentIcon(icon: Icon): OngoingExtrasBuilder = apply {
+        this.progressSegmentIcon = icon
+    }
+
+    fun setProgressSegments(vararg segments: ProgressSegment): OngoingExtrasBuilder =
+        setProgressSegments(segments.toList())
+
     fun setProgressSegments(segments: List<ProgressSegment>): OngoingExtrasBuilder = apply {
         segments.forEach { segment ->
+            require(!segment.startPosition.isNaN()) { "Segment startPosition must not be NaN" }
             require(segment.startPosition in 0f..1f) { "Segment startPosition must be in [0.0, 1.0]" }
         }
-        this.segments = segments
+        this.segments = segments.sortedBy { it.startPosition }
     }
 
     fun setShowSmallIcon(show: Boolean): OngoingExtrasBuilder = apply {
@@ -162,6 +175,10 @@ class OngoingExtrasBuilder {
         this.secondaryInfoIcon = icon
     }
 
+    fun setAodRemoteApp(remoteApp: SamsungRemoteAppConfig): OngoingExtrasBuilder = apply {
+        this.aodRemoteApp = remoteApp
+    }
+
     fun build(): Bundle {
         val bundle = Bundle()
 
@@ -173,6 +190,7 @@ class OngoingExtrasBuilder {
             chip.icon?.let { bundle.putParcelable(KEY_CHIP_ICON, it) }
             chip.backgroundColor?.let { bundle.putInt(KEY_CHIP_BG_COLOR, it) }
             chip.expandedText?.let { bundle.putString(KEY_CHIP_EXPANDED_TEXT, it) }
+            chip.firstIcon?.let { bundle.putParcelable(KEY_FIRST_ICON, it) }
         }
 
         primaryInfo?.let { bundle.putString(KEY_PRIMARY_INFO, it) }
@@ -185,6 +203,7 @@ class OngoingExtrasBuilder {
         }
 
         progressColor?.let { bundle.putInt(KEY_PROGRESS_COLOR, it) }
+        progressSegmentIcon?.let { bundle.putParcelable(KEY_SEGMENT_ICON, it) }
         nowbarIcon?.let { bundle.putParcelable(KEY_NOWBAR_ICON, it) }
         secondIcon?.let { bundle.putParcelable(KEY_SECOND_ICON, it) }
         nowbarPrimaryInfo?.let { bundle.putString(KEY_NOWBAR_PRIMARY_INFO, it) }
@@ -225,6 +244,11 @@ class OngoingExtrasBuilder {
         actionBgColor?.let { bundle.putInt(KEY_ACTION_BG_COLOR, it) }
         firstIcon?.let { bundle.putParcelable(KEY_FIRST_ICON, it) }
         secondaryInfoIcon?.let { bundle.putParcelable(KEY_SECONDARY_INFO_ICON, it) }
+        aodRemoteApp?.let { app ->
+            bundle.putCharSequence(KEY_AOD_REMOTE_APP_NAME, app.name)
+            app.icon?.let { bundle.putParcelable(KEY_AOD_REMOTE_APP_ICON, it) }
+            app.pendingIntent?.let { bundle.putParcelable(KEY_AOD_REMOTE_APP_PENDING_INTENT, it) }
+        }
 
         return bundle
     }

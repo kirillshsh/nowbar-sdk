@@ -8,9 +8,11 @@ import android.graphics.drawable.Icon
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.nowbar.api.notification.ProgressSegment
 import com.nowbar.api.notification.SamsungNowBarGroupSummaryBuilder
 import com.nowbar.api.notification.SamsungNowBarGroupSummarySpec
 import com.nowbar.api.notification.SamsungOngoingActivityDumpExtras
+import com.nowbar.api.notification.SamsungOngoingActivityProgress
 import com.nowbar.api.notification.SamsungOngoingActivityText
 import com.nowbar.api.notification.SamsungOngoingActivityViews
 import com.nowbar.api.notification.SamsungOngoingActivityVisuals
@@ -75,6 +77,16 @@ object SamsungDumpNowBarExample {
                 ongoingActivityChipIcon = appIcon,
                 chipBackgroundColor = 0xff4285f4.toInt(),
                 nowBarExpandableType = 0
+            ),
+            progress = SamsungOngoingActivityProgress(
+                current = 65,
+                max = 100,
+                color = 0xff4285f4.toInt(),
+                segmentIcon = appIcon,
+                segments = listOf(
+                    ProgressSegment(0.0f, 0xff4285f4.toInt(), appIcon),
+                    ProgressSegment(0.65f, 0xff34a853.toInt())
+                )
             ),
             substName = "Google Finance"
         )
