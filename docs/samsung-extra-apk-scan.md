@@ -46,6 +46,16 @@ Scan output:
 - Combined scan: `artifacts/local-apk-nowbar-scan/current-samsung-communication-notes-decompiled/nowbar-scan-all.txt`
 - Coverage report: `artifacts/local-apk-nowbar-scan/current-samsung-communication-notes-decompiled/key-coverage/report.md`
 
+### Samsung Pay / Personal Data Intelligence
+
+Two locally provided APKs were inspected in a deeper targeted pass:
+
+- `/Users/kirill/zalupa/com_samsung_android_spay_6_6_03_660300222_minAPI31arm64_v8a,armeabinodpi.apk`
+- `/Users/kirill/zalupa/Personal data intelligence.apk`
+
+Evidence and API conclusions are recorded in
+[`samsung-spay-pdi-nowbar-extract.md`](./samsung-spay-pdi-nowbar-extract.md).
+
 ## APK metadata
 
 | App | Package | Version | Target SDK | Result |
@@ -56,6 +66,8 @@ Scan output:
 | Samsung Notes | `com.samsung.android.app.notes` | `4.9.06.8` | `30` | no Now Bar / Live Update keys |
 | Samsung Messages | `com.samsung.android.messaging` | `14.2.15.7` | `33` | generic notification/card/chip UI strings only |
 | Samsung Dialer | `com.samsung.android.dialer` | `15.1.85` | `34` | generic notification/card/chip UI strings only |
+| Samsung Pay | `com.samsung.android.spay` | `6.6.03` | `36` | confirms Samsung `android.ongoingActivityNoti.*` travel-ticket path |
+| Personal Data Intelligence | `com.samsung.android.smartsuggestions` | `7.2.30.20` | `36` | exposes private GenUI / AppSearch / RemoteViews Now Bar pipeline |
 
 `com.samsung.android.calendar` and `com.samsung.android.app.reminder` were attempted
 through the same APKPure source but did not produce APK files in this run.
@@ -89,3 +101,16 @@ The Notes / Messages / Dialer decompiled sweep produced `observed_keys=0` and
 `android.ongoingActivityNoti.*`, `android.app.Notification$OngoingActivityStyle`,
 `com.samsung.android.support.ongoing_activity`, promoted-notification APIs, or
 `Notification.MetricStyle`. No SDK API was added from that sweep.
+
+Samsung Pay did expose a concrete Now Bar implementation for travel tickets and
+boarding passes. It confirms the existing SDK model: normal notification builder plus
+Samsung `android.ongoingActivityNoti.*` extras, `android.showSmallIcon`, manifest
+metadata `com.samsung.android.support.ongoing_activity`, and feature detection through
+`com.samsung.feature.nowbar`. It did not expose `setRequestPromotedOngoing`,
+`POST_PROMOTED_NOTIFICATIONS`, or `Notification.ProgressStyle`.
+
+Personal Data Intelligence exposed a separate Samsung-private path that maps AppSearch
+documents into `RemoteViews` named `chipView`, `normalView`, and `expandView`, then
+hands them to `IGenUICallback.updateViewWithRemoteViews(...)`. That helps explain the
+Google Sports / Finance dump-style RemoteViews evidence, but it is not treated as a
+public third-party SDK API.
