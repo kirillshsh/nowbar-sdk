@@ -22,6 +22,15 @@ Local scan artifacts were kept outside committed sources:
 - Parent dex/string sweep:
   `artifacts/local-apk-nowbar-scan/current-spay-pdi/`
 
+Tooling used during this pass:
+
+- `apkanalyzer` for manifest metadata.
+- `apktool` for manifest, resources, and smali where possible.
+- `jadx 1.5.5` for targeted Java decompilation.
+- `/opt/homebrew/share/android-commandlinetools/build-tools/37.0.0/dexdump` for
+  dex-only checks when full decompilation was unreliable.
+- `rg` / raw string scans for positive and negative API hits.
+
 Samsung Pay contains a malformed embedded asset dex that makes a full smali decode
 fail in `apktool`. The reliable path was a resource / manifest decode plus targeted
 `jadx` and `dexdump` on the relevant `classes*.dex` files. Personal Data Intelligence
@@ -55,6 +64,31 @@ Main classes and responsibilities:
 | `BdpNowBarWorkScheduler` | Enqueues unique WorkManager work named `now_bar_worker_$appCardId`. |
 | `BdpNowBarWorker` | Reloads boarding-pass state, respects `dismiss_ongoing_noti`, updates and reschedules every minute. |
 | `NowBarNotificationBroadcastReceiver` | Handles notification cancellation and persists the dismiss flag. |
+
+Exact Samsung Pay source index:
+
+| Evidence | Location |
+| --- | --- |
+| `enableNowBarSmallIcon(Bundle)` writes `android.showSmallIcon=true` | `NowBarActivityNotiUtil.java:52-55` |
+| `isSupportOngoingActivity(Context)` checks `com.samsung.feature.nowbar` | `NowBarActivityNotiUtil.java:57-60` |
+| expanded notification text writes `primaryInfo` / `secondaryInfo` | `NowBarActivityNotiUtil.java:62-68` |
+| chip writes `chipIcon`, `chipExpandedText`, `chipBgColor` | `NowBarActivityNotiUtil.java:70-75` |
+| Now Bar text writes `nowbarPrimaryInfo` / `nowbarSecondaryInfo` | `NowBarActivityNotiUtil.java:77-84` |
+| progress writes `progress` / `progressMax` | `NowBarActivityNotiUtil.java:86-90` |
+| builder uses `Notification.Builder(context, channelId)` and group `spay_now_bar_group` | `TravelTicketNowBarUtil.java:131-141` |
+| before-boarding notification writes style, chip, expanded text, progress, color | `TravelTicketNowBarUtil.java:317-342` |
+| on-boarding notification writes the same core extras | `TravelTicketNowBarUtil.java:344-368` |
+| in-progress notification adds location icon, segment bundle, and progress payload | `TravelTicketNowBarUtil.java:381-423` |
+| final post path calls `builder.addExtras(...)`, `build()`, `flags=8`, `notify(...)` | `TravelTicketNowBarUtil.java:426-435` |
+| alarm setup gates on time, ticket support, and Now Bar support | `TravelTicketNowBarUtil.java:557-575` |
+| exact alarm action/extras are written | `TravelTicketNowBarUtil.java:594-600` |
+| alarm receiver entry starts worker update for template `1001` | `TravelTicketNowBarUtil.java:606-617` |
+| WorkManager input key `appCardId`, tag `now_bar_worker_`, unique name `now_bar_worker_$appCardId` | `BdpNowBarWorkScheduler.java:23-35` |
+| worker reloads boarding pass, blocks dismissed cards, updates, and schedules the next minute tick | `BdpNowBarWorker.java:49-109` |
+| delete receiver persists dismissal and logs `now_bar/travel_ticket/delete` | `NowBarNotificationBroadcastReceiver.java:41-55` |
+| DAO reads `dismiss_ongoing_noti` | `BoardingPassDAO.java:105-106` |
+| DAO writes `dismiss_ongoing_noti` | `BoardingPassDAO.java:219-220` |
+| settings receiver reads `ongoingActivitySettingValue` | `SpayBroadcastReceiver.java:254-259` |
 
 Observed Samsung notification extras:
 
@@ -95,6 +129,39 @@ Samsung Pay resources also contain travel-oriented Now Bar strings and icons, in
 `now_bar_flight`, `now_bar_location`, and `now_bar_train`. The chip color observed in
 the helper is `#ff475fff`.
 
+Exact Samsung Pay manifest / resource index:
+
+| Evidence | Location |
+| --- | --- |
+| `POST_NOTIFICATIONS` and foreground-service permissions | `AndroidManifest.xml:192-193` |
+| `com.samsung.android.support.ongoing_activity=true` | `AndroidManifest.xml:541` |
+| settings change action `com.samsung.intent.action.ONGOING_ACTIVITY_SETTING_CHANGED` | `AndroidManifest.xml:686` |
+| declared `NowBarService` | `AndroidManifest.xml:926` |
+| `NowBarNotificationBroadcastReceiver`, `exported=false`, action `notification_cancelled` | `AndroidManifest.xml:927-930` |
+| travel strings: arrive/arriving/departing/gate/zone | `res/values/strings.xml:15602-15611` |
+| countdown plurals for arriving/departing/gate-closes | `res/values/plurals.xml:1569-1616` |
+| Now Bar drawable ids: bus/flight/train/front/location | `res/values/public.xml:25193-25199` |
+| chip/progress color `color_475fff=#ff475fff` | `res/values/colors.xml:1263` |
+
+Dex-only string and class placement:
+
+- `classes17.dex`: main Now Bar classes, helpers, extras, and feature strings.
+- `classes15.dex`: `SpayBroadcastReceiver`, `ongoingActivitySettingValue`, and
+  boarding-pass reschedule references.
+- `classes8.dex` / `classes15.dex`: extra references to `TravelTicketNowBarUtil`.
+- Exact string hits include `showNowBarNotification`, `setNowBarAlarm`,
+  `rescheduleNowBarAlarm`, `enableNowBarSmallIcon`, `#nowbar summary notification size =`,
+  and `com.samsung.feature.nowbar`.
+
+Adjacent Samsung Pay findings that were not promoted into SDK API:
+
+- Generic `BubbleMetadata`, `NotificationCompat`, and `RemoteViews` symbols exist through
+  AndroidX / library code, but no Samsung Pay Now Bar flow calls them directly.
+- `com.dejamobile.sdk.ugap.common.entrypoint.ServiceEntryPoint` declares
+  `android.permission.BIND_REMOTEVIEWS`, but it is not the travel-ticket Now Bar path.
+- `NowBarService` is declared in the manifest, but the targeted dex/string search did not
+  find a first-party implementation body.
+
 No first-party usage was found for:
 
 - `setRequestPromotedOngoing`
@@ -134,6 +201,18 @@ Main bridge:
 | `GenUIUpdateManager` | Registers `DEFAULT_CHANNEL`, `DEFAULT_SECURE_CHANNEL`, and `DEFAULT_SECURE_SUGGESTION_CHANNEL`. |
 | `GenUIService` binder registration | Uses `ON_SCREEN_NUDGE_CHANNEL` for on-screen nudges, otherwise `DEFAULT_CHANNEL`. |
 
+Exact Personal Data Intelligence source index:
+
+| Evidence | Location |
+| --- | --- |
+| Java bridge into `updateViewWithRemoteViews(type, view, remoteViews)` | `GenUIEventManager.java:92-96` |
+| public handoff `updateView(channel, type, view, remoteViews)` | `GenUIEventManager.java:224-232` |
+| smali bridge calls `IGenUICallback.updateViewWithRemoteViews(...)`; falls back to `updateView(...)` when map is empty | `GenUIEventManager.smali:362-380` |
+| `TaskGenUIController.updateGenUIData(...)` builds GenUI string then RemoteViews map | `TaskGenUIController.java:148-192` |
+| final controller callback calls `genUIEventManager.updateView(...)` | `TaskGenUIController$updateGenUIData$2$1.java:64` |
+| `GenUIUpdateManager` creates `TaskGenUIController` and registers default/secure channels | `GenUIUpdateManager.java:257-267` |
+| binder registration chooses `ON_SCREEN_NUDGE_CHANNEL` or `DEFAULT_CHANNEL` | `GenUIService$binder$1$register$1.java:50-53` |
+
 AppSearch decorator constants observed in smali:
 
 | Name | Value |
@@ -146,6 +225,18 @@ AppSearch decorator constants observed in smali:
 | `KEY_EXPAND_VIEW` | `expandView` |
 | `KEY_IS_WHITE_WALLPAPER` | `KEY_IS_WHITE_WALLPAPER` |
 
+Exact AppSearch decorator source index:
+
+| Evidence | Location |
+| --- | --- |
+| `FLAG_CHIP`, `FLAG_NORMAL`, `FLAG_EXPAND`, view keys, wallpaper key | `AppSearchViewDecoratorApi.smali:84-117` |
+| commute decorator returns bundle entries for `normalView`, `expandView`, and `chipView` | `decorators/a.smali:480-569` |
+| finance decorator returns `normalView` and `expandView` | `FinanceViewDecorator.smali:3134-3188` |
+| sports decorator reads `KEY_IS_WHITE_WALLPAPER` and switches colors/icons | `SportsViewDecorator.smali:4796-4890` |
+| sports decorator builds `chipView`, `normalView`, and `expandView` based on flags | `SportsViewDecorator.smali:5257-5496` |
+| sports GenUI mapper calls `buildSportsInfoRemoteViews(..., FLAG_EXPAND, KEY_IS_WHITE_WALLPAPER=true/false)` | `GenUIRuleMapper$remoteViewsMap$1.java:35-39` |
+| sports mapper stores returned expanded RemoteViews under `_light` and `_dark` keys | `GenUIRuleMapper$remoteViewsMap$1.smali:160-208` |
+
 RemoteViews builders:
 
 - Commute builds `chipView`, `normalView`, and `expandView`.
@@ -155,6 +246,14 @@ RemoteViews builders:
   for the Now Bar surface.
 - The sports GenUI mapper builds light and dark RemoteViews variants and stores them
   under string keys that end in `_light` and `_dark`.
+
+GenUI model / renderer evidence:
+
+- `GenUINode$ExtraRemoteViews` exists in the embedded GenUI model layer.
+- `ExtraRemoteViews` carries `key`, `style`, `priority`, `action`, and `type` fields.
+- `GenUINodeAdapterFactory`, `GenUIStyleKit`, and `GenUIRenderer` reference
+  `GenUINode$ExtraRemoteViews`, which confirms that RemoteViews are a first-class GenUI
+  node type, not only a side bundle.
 
 Now Bar / ongoing resources:
 
@@ -171,9 +270,31 @@ Now Bar / ongoing resources:
 - `nowbar_bg_evening`
 - `nowbar_bg_morning`
 - `nowbar_google_sports_pop_up_bg`
+- `nowbar_ic_galaxy_intelligence`
+- `nowbar_commute_chip_background`
+- `nowbar_daily_activity`
+- `nowbar_driving`
+- `nowbar_schedule`
 - `nowbar_sports_chip_no_logo_bg`
 - `nowbar_sports_expand_no_logo_bg`
 - `nowbar_sports_normal_no_logo_bg`
+- `lock_listen_brief_nowbar_afternoon`
+- `lock_listen_brief_nowbar_evening`
+- `lock_listen_brief_nowbar_morning`
+- `rounded_nowbar_button_background`
+
+Resource / string evidence index:
+
+| Evidence | Location |
+| --- | --- |
+| `app_name_now_bar` | `res/values/strings.xml:357` |
+| Now brief stays on Now bar until tapped and reappears with new content | `res/values/strings.xml:674` |
+| lock-screen Now brief can expand without unlocking | `res/values/strings.xml:708-710` |
+| Audio Brief notification permission copy is for playback controls | `res/values/strings.xml:2535` |
+| sports scores require live notifications in Now bar settings | `res/values/strings.xml:3101` |
+| `common_layout_ongoing_commute_*`, `finance_*`, `sports_*` | `res/values/public.xml:16616-16623` |
+| `nowbar_commute_chip_view` | `res/values/public.xml:17373` |
+| Now Bar background / sports / Galaxy Intelligence drawables | `res/values/public.xml:11424-11446` |
 
 Data and analysis classes:
 
@@ -192,6 +313,51 @@ Data and analysis classes:
 - `SportsNowBarSportsAnalyzer`
 - `StockNowBarGoogleFinanceAnalyzer`
 
+Additional PDI data / provider / document surface:
+
+- `NowBarGoogleFinanceDao_ChinaRawDataDatabase_Impl`
+- `NowBarGoogleFinanceDao_GlobalRawDataDatabase_Impl`
+- `NowBarSportsDao_ChinaRawDataDatabase_Impl`
+- `NowBarSportsDao_GlobalRawDataDatabase_Impl`
+- `NowBarGoogleFinanceSourceData`
+- `NowBarSportsSourceData`
+- AppSearch sports/finance document decorators:
+  `SportsTeamDocument`, `SportsEventDocument`, `FinanceDocument`, `PublisherName`,
+  `ISportsInfo`, and `ISportsTeamInfo`.
+- Source-data fields observed for sports include `identifier`, `sports`, `homeTeam`,
+  `awayTeam`, and `startDate`.
+- Source-data fields observed for finance include `description`, `alternateNames`,
+  `type`, `name`, `fullName`, `symbol`, `price`, `priceChangeDelta`,
+  `priceChangePercentage`, `marketName`, `marketDescription`, `marketCurrency`,
+  `marketCountry`, `marketCode`, and `marketTimeZone`.
+
+Broader GenUI converter families seen around the same pipeline:
+
+- `CommutingToOfficeTaskConverter`
+- `DailyMomentTaskConverter`
+- `DailyReminderReviewDataTaskConverter`
+- `DeliveryMessageDailyReportConverter`
+- `EvBatteryInfoTaskConverter`
+- `GalleryStorySuggestionTaskConverter`
+- `HealthBloodGlucoseBgmTaskConverter`
+- `HealthDailyActivityTaskConverter`
+- `HealthSleepBedtimeTaskConverter`
+- `HealthSleepScoreTaskConverter`
+- `HealthWorkOutResultTaskConverter`
+- `ImminentCouponAlertTaskConverter`
+- `MissedCallTaskConverter`
+- `NewsDataTaskConverter`
+- `ParkingFeeInfoTaskConverter`
+- `ParkingTaskConverter`
+- `RecallListTaskConverter`
+- `ReminderCardRoutineDataTaskConverter`
+- `ScheduleTaskConverter`
+- `SleepingEnvironmentReportTaskConverter`
+- `SynapseCardTaskConverter`
+- `TravelTicketTaskConverter`
+- `UpcomingContactAppDomainDataTaskConverter`
+- `WeatherTaskConverter`
+
 Notification-related code in PDI appears adjacent, not the primary Now Bar transport:
 
 - Audio Brief creates a normal `NotificationCompat` notification and channel.
@@ -201,6 +367,30 @@ Notification-related code in PDI appears adjacent, not the primary Now Bar trans
 - No first-party Now Bar `startForeground()` or promoted ongoing notification builder
   path was found.
 
+Exact adjacent-notification source index:
+
+| Evidence | Location |
+| --- | --- |
+| Audio Brief builds `NotificationCompat` on `ListenBriefNotificationDataSource_CHANNEL_ID` | `ListenBriefNotificationRepository.smali:1097-1157` |
+| Audio Brief posts `NotificationManager.notify(0x3e9, notification)` | `ListenBriefNotificationRepository.smali:1195-1201` |
+| Audio Brief creates its notification channel | `ListenBriefNotificationRepository.smali:1528-1588` |
+| Audio Brief checks `android.permission.POST_NOTIFICATIONS` | `ListenBriefNotificationRepository.smali:1672-1674` |
+| notification listener converts `StatusBarNotification` into document data | `PdeNotificationListenerService.smali:242-270` |
+| notification user-action path reads extra `pde_noti_id` | `PdeNotificationListenerService.smali:317-325` |
+
+Exact Personal Data Intelligence manifest index:
+
+| Evidence | Location |
+| --- | --- |
+| custom permission `BRIEF_LIFECYCLE` and self-use | `AndroidManifest.apkanalyzer.xml:323-328` |
+| `POST_NOTIFICATIONS` | `AndroidManifest.apkanalyzer.xml:333-334` |
+| `ACCESS_NOTIFICATIONS` / `MANAGE_NOTIFICATIONS` | `AndroidManifest.apkanalyzer.xml:795-799` |
+| `com.samsung.android.sharelive.permission.SHARE_LIVE_UPDATE` | `AndroidManifest.apkanalyzer.xml:1024-1025` |
+| `FOREGROUND_SERVICE` | `AndroidManifest.apkanalyzer.xml:1068-1069` |
+| `WidgetNowBarAgent$WidgetNowBarReceiver`, exported false | `AndroidManifest.apkanalyzer.xml:2451-2453` |
+| `PdeNotificationListenerService`, disabled, `BIND_NOTIFICATION_LISTENER_SERVICE`, process `:moneta` | `AndroidManifest.apkanalyzer.xml:3945-3957` |
+| AndroidX WorkManager foreground service | `AndroidManifest.apkanalyzer.xml:4292-4296` |
+
 No first-party usage was found for:
 
 - `setRequestPromotedOngoing`
@@ -209,6 +399,16 @@ No first-party usage was found for:
 - `BubbleMetadata`
 - `setBubbleMetadata`
 - `android.ongoingActivityNoti.*`
+
+Negative-search interpretation:
+
+- Bubble APIs were present only through AndroidX compatibility classes in PDI.
+- Samsung Pay also has generic bubble/RemoteViews strings from library code, but no
+  first-party Now Bar path used them.
+- `ProgressStyle` hits in Samsung Pay were ordinary resource / style names such as
+  `indeterminateProgressStyle`, not Android `Notification.ProgressStyle`.
+- PDI has notification APIs for Audio Brief and data ingestion, but not as the carrier
+  for the Now Bar / Now Brief GenUI cards.
 
 ## SDK consequences
 

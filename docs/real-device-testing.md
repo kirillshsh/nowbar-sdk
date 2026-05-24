@@ -288,6 +288,12 @@ OUT_DIR=artifacts/local-apk-nowbar-scan/current-samsung-voice \
   scripts/scan_local_apks_for_nowbar.sh artifacts/external-apks/com.sec.android.app.voicenote.apk
 ```
 
+Samsung Pay and Personal Data Intelligence are useful as deeper static fixtures:
+Samsung Pay confirms the travel-ticket `android.ongoingActivityNoti.*` extras path,
+while Personal Data Intelligence exposes the private GenUI / AppSearch / RemoteViews
+pipeline behind sports, finance, and commute Now Bar cards. The full evidence index is
+in [`samsung-spay-pdi-nowbar-extract.md`](./samsung-spay-pdi-nowbar-extract.md).
+
 This does not replace real-device Now Bar rendering checks, but it does validate the
 manifest strings, proprietary Samsung extras, and decompiled helper names used by the
 SDK compatibility layer.

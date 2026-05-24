@@ -13,6 +13,20 @@ The Samsung side uses `pkg=com.samsung.android.app.aodservice` and creates a pai
 
 The summary notification has `GROUP_SUMMARY`. The child notification carries `android.template=android.app.Notification$OngoingActivityStyle`, the richer `android.ongoingActivityNoti.*` extras, `nowbarRemoteView`, and `expandedRemoteView`.
 
+## PDI / GenUI correlation
+
+The later Personal Data Intelligence APK pass recorded in
+[`samsung-spay-pdi-nowbar-extract.md`](./samsung-spay-pdi-nowbar-extract.md) found a
+Samsung-private GenUI / AppSearch / RemoteViews pipeline for sports, finance, and
+commute cards. That APK builds `chipView`, `normalView`, and `expandView` RemoteViews
+through `AppSearchViewDecoratorApi`, then hands a `Map<String, RemoteViews>` to
+`IGenUICallback.updateViewWithRemoteViews(...)`.
+
+This does not prove the full SystemUI / AOD server-side contract, but it is the best
+static explanation found so far for how Google Sports / Finance data can become the
+dumped Samsung AOD Now Bar RemoteViews payloads. The SDK keeps this evidence in the
+dump/inspection lane rather than exposing the private GenUI binder path as public API.
+
 ## Keys added from the dumps
 
 ### Remote app identity
